@@ -90,51 +90,173 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Day Sessions ItemsControl -->
-                            <ItemsControl x:Name="DaySessionsItemsControl">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="0,0,0,10"
-                                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="10"
-                                                Padding="16,12"
-                                                Tapped="OnSessionCardTapped"
-                                                Tag="{Binding}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                                <Border Grid.Column="0"
-                                                        Width="38"
-                                                        Height="38"
-                                                        CornerRadius="8"
-                                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                        Margin="0,0,14,0"
-                                                        VerticalAlignment="Center">
-                                                    <FontIcon Glyph="&#xE768;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
+                            <!-- Self Sessions Group -->
+                            <StackPanel x:Name="SelfSessionsGroup" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Border Width="26" Height="26" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                        <FontIcon Glyph="&#xE77B;" FontSize="12" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Self Sessions" FontSize="15" FontWeight="SemiBold" />
+                                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Padding="7,1">
+                                        <TextBlock x:Name="SelfSessionsCountText" Text="0" FontSize="11" FontWeight="SemiBold" />
+                                    </Border>
+                                </StackPanel>
 
-                                                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="15" FontWeight="SemiBold" />
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="{Binding FormattedTime}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock Text="{Binding QuestionCount}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock Text="questions" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <ItemsControl x:Name="SelfSessionsItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,10"
+                                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Padding="16,12"
+                                                    Tapped="OnSessionCardTapped"
+                                                    Tag="{Binding}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <Border Grid.Column="0"
+                                                            Width="38"
+                                                            Height="38"
+                                                            CornerRadius="8"
+                                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            Margin="0,0,14,0"
+                                                            VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE77B;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+
+                                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayTitle}" FontSize="15" FontWeight="SemiBold" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="{Binding SessionTypeName}"
+                                                                           FontSize="11"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                            </Border>
+                                                            <TextBlock Text="{Binding FormattedTime}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="{Binding QuestionCount}"
+                                                                           FontSize="11"
+                                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </Border>
+                                                            <TextBlock Text="questions" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        </StackPanel>
                                                     </StackPanel>
-                                                </StackPanel>
 
-                                                <Button Grid.Column="2"
-                                                        Content="Open"
-                                                        Style="{ThemeResource SubtleButtonStyle}"
-                                                        Padding="12,6"
-                                                        Click="OnOpenSessionClicked"
-                                                        Tag="{Binding}"
-                                                        VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                                    <Button Grid.Column="2"
+                                                            Content="Open"
+                                                            Style="{ThemeResource SubtleButtonStyle}"
+                                                            Padding="12,6"
+                                                            Click="OnOpenSessionClicked"
+                                                            Tag="{Binding}"
+                                                            VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="NoSelfSessionsText"
+                                           Text="No self sessions recorded on this day."
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Margin="4,0,0,4"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+
+                            <!-- Class Sessions Group -->
+                            <StackPanel x:Name="ClassSessionsGroup" Spacing="10" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Border Width="26" Height="26" CornerRadius="6" Background="#8A4FFF">
+                                        <FontIcon Glyph="&#xE7BE;" FontSize="12" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Class Sessions" FontSize="15" FontWeight="SemiBold" />
+                                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Padding="7,1">
+                                        <TextBlock x:Name="ClassSessionsCountText" Text="0" FontSize="11" FontWeight="SemiBold" />
+                                    </Border>
+                                </StackPanel>
+
+                                <ItemsControl x:Name="ClassSessionsItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,10"
+                                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Padding="16,12"
+                                                    Tapped="OnSessionCardTapped"
+                                                    Tag="{Binding}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <Border Grid.Column="0"
+                                                            Width="38"
+                                                            Height="38"
+                                                            CornerRadius="8"
+                                                            Background="#8A4FFF"
+                                                            Margin="0,0,14,0"
+                                                            VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE7BE;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+
+                                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayTitle}" FontSize="15" FontWeight="SemiBold" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="{Binding SessionTypeName}"
+                                                                           FontSize="11"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="#8A4FFF" />
+                                                            </Border>
+                                                            <TextBlock Text="{Binding FormattedTime}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2">
+                                                                <TextBlock Text="{Binding QuestionCount}"
+                                                                           FontSize="11"
+                                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </Border>
+                                                            <TextBlock Text="questions" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+
+                                                    <Button Grid.Column="2"
+                                                            Content="Open"
+                                                            Style="{ThemeResource SubtleButtonStyle}"
+                                                            Padding="12,6"
+                                                            Click="OnOpenSessionClicked"
+                                                            Tag="{Binding}"
+                                                            VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="NoClassSessionsText"
+                                           Text="No class sessions recorded on this day."
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Margin="4,0,0,4"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

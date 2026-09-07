@@ -1,0 +1,61 @@
+<UserControl
+    x:Class="TableLamp.Views.FloatingNotificationCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    HorizontalAlignment="Left"
+    VerticalAlignment="Top">
+
+    <Grid x:Name="ToastRoot"
+          Visibility="Collapsed"
+          Margin="0,0,0,0">
+        <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1.5"
+                CornerRadius="10"
+                Padding="14,10"
+                MinWidth="320"
+                MaxWidth="620">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <!-- Severity Icon Badge -->
+                <Border x:Name="SeverityIconBorder"
+                        Grid.Column="0"
+                        Width="28"
+                        Height="28"
+                        CornerRadius="14"
+                        VerticalAlignment="Center">
+                    <FontIcon x:Name="SeverityFontIcon"
+                              FontSize="13"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+                </Border>
+
+                <!-- Message Content -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="ToastTitleText"
+                               FontWeight="SemiBold"
+                               FontSize="13"
+                               Visibility="Collapsed" />
+                    <TextBlock x:Name="ToastMessageText"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                </StackPanel>
+
+                <!-- Dismiss Button ('X') -->
+                <Button x:Name="DismissToastButton"
+                        Grid.Column="2"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Dismiss">
+                    <FontIcon Glyph="&#xE8BB;" FontSize="10" />
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

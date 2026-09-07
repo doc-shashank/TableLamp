@@ -8,6 +8,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using TableLamp.Models;
 using TableLamp.Services;
 using WinRT.Interop;
@@ -36,7 +37,11 @@ namespace TableLamp.Views
             }
 
             _activeInstance = new DevToolsWindow();
-            _activeInstance.Closed += (s, e) => { _activeInstance = null; };
+            _activeInstance.Closed += (s, e) =>
+            {
+                _activeInstance._caretMonitorTimer?.Stop();
+                _activeInstance = null;
+            };
             return _activeInstance;
         }
 
@@ -57,12 +62,52 @@ namespace TableLamp.Views
         private int _historyIndex = -1;
         private bool _isNavigatingHistory;
 
+        // Real-time Caret Monitor
+        private DispatcherTimer? _caretMonitorTimer;
+        private int _lastReportedCaret = -1;
+        private int _lastReportedSelLen = -1;
+
         public DevToolsWindow()
         {
             this.InitializeComponent();
 
             ConfigureDevWindow();
+            WireCaptionButtons();
             InitializeEditor();
+        }
+
+        private void WireCaptionButtons()
+        {
+            WindowMinimizeButton.Click += (s, e) =>
+            {
+                if (_appWindow?.Presenter is OverlappedPresenter presenter)
+                {
+                    presenter.Minimize();
+                }
+            };
+
+            WindowExitButton.Click += (s, e) =>
+            {
+                this.Close();
+            };
+
+            WindowExitButton.PointerEntered += (s, e) =>
+            {
+                WindowExitButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 232, 17, 35));
+                if (WindowExitButton.Content is FontIcon icon)
+                {
+                    icon.Foreground = new SolidColorBrush(Colors.White);
+                }
+            };
+
+            WindowExitButton.PointerExited += (s, e) =>
+            {
+                WindowExitButton.Background = new SolidColorBrush(Colors.Transparent);
+                if (WindowExitButton.Content is FontIcon icon)
+                {
+                    icon.ClearValue(FontIcon.ForegroundProperty);
+                }
+            };
         }
 
         private void ConfigureDevWindow()
@@ -79,14 +124,10 @@ namespace TableLamp.Views
                     {
                         _appWindow.Title = "Table Lamp - Developer Tools & Preset Tag Generator";
 
-                        // Custom title bar without dragging per requirement
-                        ExtendsContentIntoTitleBar = true;
-                        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
-                        _appWindow.TitleBar.SetDragRectangles(Array.Empty<Windows.Graphics.RectInt32>());
-
-                        // Maximize the window
+                        // Border-only window without native title bar or native caption buttons
                         if (_appWindow.Presenter is OverlappedPresenter presenter)
                         {
+                            presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
                             presenter.Maximize();
                         }
                     }
@@ -104,10 +145,49 @@ namespace TableLamp.Views
             _tree = _generator.Parse(currentJson);
             SetJsonText(currentJson);
 
-            // Wire selection events in JSON preview textarea
+            // Wire selection and editing events in JSON preview textarea
             JsonPreviewBox.SelectionChanged += OnJsonPreviewSelectionChanged;
             JsonPreviewBox.KeyUp += (s, e) => DetectContextFromSelection();
             JsonPreviewBox.PointerReleased += (s, e) => DetectContextFromSelection();
+            JsonPreviewBox.TextChanged += OnJsonPreviewTextChanged;
+            JsonPreviewBox.LostFocus += (s, e) => SyncTreeFromPreviewText();
+
+            // WinUI 3 handled event subscriptions to guarantee pointer and keyboard caret responsiveness
+            JsonPreviewBox.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() => DetectContextFromSelection());
+            }), true);
+
+            JsonPreviewBox.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() => DetectContextFromSelection());
+            }), true);
+
+            JsonPreviewBox.AddHandler(UIElement.KeyUpEvent, new KeyEventHandler((s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() => DetectContextFromSelection());
+            }), true);
+
+            JsonPreviewBox.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler((s, e) =>
+            {
+                DispatcherQueue.TryEnqueue(() => DetectContextFromSelection());
+            }), true);
+
+            // Lightweight periodic monitor ensuring caret movements (arrows, clicks, drag) immediately update attribute editor
+            _caretMonitorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _caretMonitorTimer.Tick += (s, e) =>
+            {
+                if (_isUpdatingPreviewText) return;
+                int currentCaret = JsonPreviewBox.SelectionStart;
+                int currentSelLen = JsonPreviewBox.SelectionLength;
+                if (currentCaret != _lastReportedCaret || currentSelLen != _lastReportedSelLen)
+                {
+                    _lastReportedCaret = currentCaret;
+                    _lastReportedSelLen = currentSelLen;
+                    DetectContextFromSelection();
+                }
+            };
+            _caretMonitorTimer.Start();
 
             // Wire toolbar actions
             StartFromScratchButton.Click += OnStartFromScratchClicked;
@@ -164,6 +244,47 @@ namespace TableLamp.Views
             _isUpdatingPreviewText = false;
         }
 
+        private DispatcherTimer? _previewDebounceTimer;
+
+        private void OnJsonPreviewTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isUpdatingPreviewText) return;
+
+            if (_previewDebounceTimer == null)
+            {
+                _previewDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                _previewDebounceTimer.Tick += (s, ev) =>
+                {
+                    _previewDebounceTimer.Stop();
+                    SyncTreeFromPreviewText();
+                };
+            }
+            _previewDebounceTimer.Stop();
+            _previewDebounceTimer.Start();
+        }
+
+        private void SyncTreeFromPreviewText()
+        {
+            if (_isUpdatingPreviewText) return;
+
+            string text = JsonPreviewBox.Text;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            try
+            {
+                var parsed = _generator.Parse(text);
+                if (parsed != null && parsed.Count > 0)
+                {
+                    _tree = parsed;
+                    DetectContextFromSelection();
+                }
+            }
+            catch
+            {
+                // Ignore incomplete JSON while user is actively typing
+            }
+        }
+
         private void OnJsonPreviewSelectionChanged(object sender, RoutedEventArgs e)
         {
             if (!_isUpdatingPreviewText)
@@ -173,7 +294,7 @@ namespace TableLamp.Views
         }
 
         /// <summary>
-        /// Accurately detects line index and hierarchy context without selecting the whole line text.
+        /// Accurately detects line index and hierarchy context and updates the attribute editor card.
         /// </summary>
         private void DetectContextFromSelection()
         {
@@ -185,113 +306,37 @@ namespace TableLamp.Views
             }
 
             int caret = JsonPreviewBox.SelectionStart;
-            int currentLineIndex = 0;
-            int lineStartChar = 0;
+            var context = DevToolsNavigator.DetectContextAtCaret(fullText, caret);
 
-            // Count newlines exactly to prevent carriage-return drift
-            for (int i = 0; i < caret && i < fullText.Length; i++)
-            {
-                if (fullText[i] == '\n')
-                {
-                    currentLineIndex++;
-                    lineStartChar = i + 1;
-                }
-            }
-
-            var lines = fullText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            string currentLine = currentLineIndex < lines.Length ? lines[currentLineIndex] : "";
-            string trimmedCurrentLine = currentLine.Trim();
+            int currentLineIndex = context.LineIndex;
+            string trimmedCurrentLine = context.LineContent.Trim();
 
             // Update Active Line Indicator without selecting whole line text
             ContextLineNumberText.Text = $"Line {currentLineIndex + 1}";
             ActiveLineGutterText.Text = $"Line {currentLineIndex + 1}:";
             ActiveLineContentSnippetText.Text = string.IsNullOrWhiteSpace(trimmedCurrentLine) ? "(empty line)" : trimmedCurrentLine;
 
-            // Trace hierarchy from 0 up to currentLineIndex
-            string? foundSubj = null;
-            string? foundCh = null;
-            string? foundTop = null;
+            _activeSubjectKey = context.SubjectKey ?? _tree.Keys.FirstOrDefault();
+            _activeChapterKey = context.ChapterKey;
+            _activeTopicKey = context.TopicKey;
 
-            for (int i = 0; i <= currentLineIndex && i < lines.Length; i++)
+            // Route to contextual attribute editor card based on detected hierarchy
+            if (context.ElementType == "Topic" && context.SubjectKey != null && context.ChapterKey != null && context.TopicKey != null &&
+                _tree.TryGetValue(context.SubjectKey, out var subjForTopic) &&
+                subjForTopic.Chapters != null && subjForTopic.Chapters.TryGetValue(context.ChapterKey, out var chForTopic) &&
+                chForTopic.Topics != null && chForTopic.Topics.TryGetValue(context.TopicKey, out var topicObj))
             {
-                string line = lines[i];
-                string trimmed = line.Trim();
-
-                // 1. Subject Header: e.g. "Subject1": { or "Robins Physiology": {
-                if (line.StartsWith("  \"") && trimmed.EndsWith(": {") && !trimmed.Contains("\"Chapters\""))
-                {
-                    int quote1 = line.IndexOf('"');
-                    int quote2 = line.IndexOf('"', quote1 + 1);
-                    if (quote1 >= 0 && quote2 > quote1)
-                    {
-                        foundSubj = line.Substring(quote1 + 1, quote2 - quote1 - 1);
-                        foundCh = null;
-                        foundTop = null;
-                    }
-                }
-                // 2. Chapter Header: e.g. "chapter1": { or "Chapter 1": {
-                else if ((trimmed.StartsWith("\"chapter", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("\"Chapter", StringComparison.OrdinalIgnoreCase))
-                         && trimmed.EndsWith(": {"))
-                {
-                    int quote1 = trimmed.IndexOf('"');
-                    int quote2 = trimmed.IndexOf('"', quote1 + 1);
-                    if (quote1 >= 0 && quote2 > quote1)
-                    {
-                        foundCh = trimmed.Substring(quote1 + 1, quote2 - quote1 - 1);
-                        foundTop = null;
-                    }
-                }
-                // 3. Topic Header: e.g. "topic_1": {
-                else if (trimmed.StartsWith("\"topic_", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(": {"))
-                {
-                    int quote1 = trimmed.IndexOf('"');
-                    int quote2 = trimmed.IndexOf('"', quote1 + 1);
-                    if (quote1 >= 0 && quote2 > quote1)
-                    {
-                        foundTop = trimmed.Substring(quote1 + 1, quote2 - quote1 - 1);
-                    }
-                }
+                ShowTopicPanel(context.ChapterKey, topicObj.Key, topicObj);
+                RecordHistoryToken($"topic:{context.SubjectKey}:{context.ChapterKey}:{topicObj.Key}");
+                return;
             }
 
-            _activeSubjectKey = foundSubj ?? _tree.Keys.FirstOrDefault();
-            _activeChapterKey = foundCh;
-            _activeTopicKey = foundTop;
-
-            // Determine active level based on trimmedCurrentLine
-            bool isTopicLine = trimmedCurrentLine.StartsWith("\"topic_", StringComparison.OrdinalIgnoreCase) ||
-                               trimmedCurrentLine.StartsWith("\"start_page\"", StringComparison.OrdinalIgnoreCase) ||
-                               trimmedCurrentLine.StartsWith("\"end_page\"", StringComparison.OrdinalIgnoreCase) ||
-                               (foundTop != null && trimmedCurrentLine.StartsWith("\"name\"", StringComparison.OrdinalIgnoreCase));
-
-            bool isChapterLine = !isTopicLine &&
-                                 (trimmedCurrentLine.StartsWith("\"chapter", StringComparison.OrdinalIgnoreCase) ||
-                                  trimmedCurrentLine.StartsWith("\"Chapter", StringComparison.OrdinalIgnoreCase) ||
-                                  trimmedCurrentLine.Contains("\"Chapters\"") ||
-                                  (foundCh != null && foundTop == null && trimmedCurrentLine.StartsWith("\"name\"", StringComparison.OrdinalIgnoreCase)));
-
-            bool isSubjectLine = !isTopicLine && !isChapterLine &&
-                                 (trimmedCurrentLine.StartsWith("\"short_name\"") ||
-                                  trimmedCurrentLine.StartsWith("\"full_name\"") ||
-                                  trimmedCurrentLine.StartsWith("\"edition\"") ||
-                                  (foundSubj != null && trimmedCurrentLine.Contains($"\"{foundSubj}\"")));
-
-            if (isTopicLine && foundSubj != null && foundCh != null && _tree.TryGetValue(foundSubj, out var s) &&
-                s.Chapters.TryGetValue(foundCh, out var c))
+            if (context.ElementType == "Chapter" && context.SubjectKey != null && context.ChapterKey != null &&
+                _tree.TryGetValue(context.SubjectKey, out var subjForChapter) &&
+                subjForChapter.Chapters != null && subjForChapter.Chapters.TryGetValue(context.ChapterKey, out var chObj))
             {
-                string topKey = foundTop ?? c.Topics.Keys.FirstOrDefault() ?? "topic_1";
-                if (c.Topics.TryGetValue(topKey, out var topic))
-                {
-                    ShowTopicPanel(foundCh, topic.Key, topic);
-                    RecordHistoryToken($"topic:{foundSubj}:{foundCh}:{topic.Key}");
-                    return;
-                }
-            }
-
-            if ((isChapterLine || (foundCh != null && !isSubjectLine)) && foundSubj != null &&
-                _tree.TryGetValue(foundSubj, out var subj) && foundCh != null && subj.Chapters.TryGetValue(foundCh, out var chapter))
-            {
-                ShowChapterPanel(foundSubj, chapter.Key, chapter);
-                RecordHistoryToken($"chapter:{foundSubj}:{chapter.Key}");
+                ShowChapterPanel(context.SubjectKey, chObj.Key, chObj);
+                RecordHistoryToken($"chapter:{context.SubjectKey}:{chObj.Key}");
                 return;
             }
 
@@ -410,8 +455,20 @@ namespace TableLamp.Views
                 var parts = token.Split(':');
                 if (parts.Length >= 2)
                 {
-                    string targetKey = parts.Last();
-                    MoveCaretToToken($"\"{targetKey}\":");
+                    string subj = parts.Length > 1 ? parts[1] : "";
+                    string? ch = parts.Length > 2 ? parts[2] : null;
+                    string? top = parts.Length > 3 ? parts[3] : null;
+
+                    var elements = ScanElementPositions(JsonPreviewBox.Text);
+                    var match = elements.FirstOrDefault(e =>
+                        (top != null && e.Type == "Topic" && string.Equals(e.SubjectKey, subj, StringComparison.OrdinalIgnoreCase) && string.Equals(e.ChapterKey, ch, StringComparison.OrdinalIgnoreCase) && string.Equals(e.TopicKey, top, StringComparison.OrdinalIgnoreCase)) ||
+                        (top == null && ch != null && e.Type == "Chapter" && string.Equals(e.SubjectKey, subj, StringComparison.OrdinalIgnoreCase) && string.Equals(e.ChapterKey, ch, StringComparison.OrdinalIgnoreCase)) ||
+                        (top == null && ch == null && e.Type == "Subject" && string.Equals(e.SubjectKey, subj, StringComparison.OrdinalIgnoreCase)));
+
+                    if (match != null)
+                    {
+                        NavigateToElement(match);
+                    }
                 }
             }
             finally
@@ -431,110 +488,46 @@ namespace TableLamp.Views
 
         #region Next & Previous Element Navigation
 
-        private class NavElement
-        {
-            public string Type { get; set; } = "";
-            public string SubjectKey { get; set; } = "";
-            public string? ChapterKey { get; set; }
-            public string? TopicKey { get; set; }
-            public string SearchToken { get; set; } = "";
-        }
+        public static List<DevElementPosition> ScanElementPositions(string text) => DevToolsNavigator.ScanElementPositions(text);
 
-        private List<NavElement> BuildSequentialElementList()
-        {
-            var list = new List<NavElement>();
-            foreach (var (subjKey, subj) in _tree)
-            {
-                list.Add(new NavElement
-                {
-                    Type = "Subject",
-                    SubjectKey = subjKey,
-                    SearchToken = $"\"{subjKey}\":"
-                });
-
-                if (subj.Chapters == null) continue;
-                foreach (var (chKey, ch) in subj.Chapters)
-                {
-                    list.Add(new NavElement
-                    {
-                        Type = "Chapter",
-                        SubjectKey = subjKey,
-                        ChapterKey = chKey,
-                        SearchToken = $"\"{chKey}\":"
-                    });
-
-                    if (ch.Topics == null) continue;
-                    foreach (var (topKey, top) in ch.Topics)
-                    {
-                        list.Add(new NavElement
-                        {
-                            Type = "Topic",
-                            SubjectKey = subjKey,
-                            ChapterKey = chKey,
-                            TopicKey = topKey,
-                            SearchToken = $"\"{topKey}\":"
-                        });
-                    }
-                }
-            }
-            return list;
-        }
+        public static int FindCurrentElementIndex(List<DevElementPosition> elements, string? activeSubj, string? activeCh, string? activeTop, int caret) =>
+            DevToolsNavigator.FindCurrentElementIndex(elements, activeSubj, activeCh, activeTop, caret);
 
         private void OnNextElementClicked(object sender, RoutedEventArgs e)
         {
-            var elements = BuildSequentialElementList();
+            var elements = DevToolsNavigator.ScanElementPositions(JsonPreviewBox.Text);
             if (elements.Count == 0) return;
 
-            int currentIndex = FindCurrentElementIndex(elements);
-            int nextIndex = currentIndex + 1;
-            if (nextIndex >= elements.Count) nextIndex = 0; // wrap around
+            int caret = JsonPreviewBox.SelectionStart;
+            int currentIndex = DevToolsNavigator.FindCurrentElementIndex(elements, _activeSubjectKey, _activeChapterKey, _activeTopicKey, caret);
+            int nextIndex = DevToolsNavigator.GetNextIndex(currentIndex, elements.Count);
 
-            MoveCaretToToken(elements[nextIndex].SearchToken);
+            NavigateToElement(elements[nextIndex]);
         }
 
         private void OnPreviousElementClicked(object sender, RoutedEventArgs e)
         {
-            var elements = BuildSequentialElementList();
+            var elements = DevToolsNavigator.ScanElementPositions(JsonPreviewBox.Text);
             if (elements.Count == 0) return;
 
-            int currentIndex = FindCurrentElementIndex(elements);
-            int prevIndex = currentIndex - 1;
-            if (prevIndex < 0) prevIndex = elements.Count - 1; // wrap around
+            int caret = JsonPreviewBox.SelectionStart;
+            int currentIndex = DevToolsNavigator.FindCurrentElementIndex(elements, _activeSubjectKey, _activeChapterKey, _activeTopicKey, caret);
+            int prevIndex = DevToolsNavigator.GetPreviousIndex(currentIndex, elements.Count);
 
-            MoveCaretToToken(elements[prevIndex].SearchToken);
+            NavigateToElement(elements[prevIndex]);
         }
 
-        private int FindCurrentElementIndex(List<NavElement> elements)
+        private void NavigateToElement(DevElementPosition elem)
         {
-            if (_activeTopicKey != null)
-            {
-                int idx = elements.FindIndex(e => e.TopicKey == _activeTopicKey);
-                if (idx >= 0) return idx;
-            }
-            if (_activeChapterKey != null)
-            {
-                int idx = elements.FindIndex(e => e.ChapterKey == _activeChapterKey && e.Type == "Chapter");
-                if (idx >= 0) return idx;
-            }
-            if (_activeSubjectKey != null)
-            {
-                int idx = elements.FindIndex(e => e.SubjectKey == _activeSubjectKey && e.Type == "Subject");
-                if (idx >= 0) return idx;
-            }
-            return 0;
-        }
+            _activeSubjectKey = elem.SubjectKey;
+            _activeChapterKey = elem.ChapterKey;
+            _activeTopicKey = elem.TopicKey;
 
-        private void MoveCaretToToken(string token)
-        {
-            string text = JsonPreviewBox.Text;
-            int idx = text.IndexOf(token, StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0)
-            {
-                JsonPreviewBox.Focus(FocusState.Programmatic);
-                JsonPreviewBox.SelectionStart = idx;
-                JsonPreviewBox.SelectionLength = 0; // Do NOT select the whole text
-                DetectContextFromSelection();
-            }
+            JsonPreviewBox.Focus(FocusState.Programmatic);
+            JsonPreviewBox.SelectionStart = elem.CharOffset;
+            JsonPreviewBox.SelectionLength = 0; // Do NOT select the whole text
+
+            DetectContextFromSelection();
         }
 
         #endregion
@@ -545,7 +538,12 @@ namespace TableLamp.Views
         {
             if (!string.IsNullOrEmpty(_activeSubjectKey))
             {
-                MoveCaretToToken($"\"{_activeSubjectKey}\":");
+                var elements = ScanElementPositions(JsonPreviewBox.Text);
+                var subjElem = elements.FirstOrDefault(el => el.Type == "Subject" && string.Equals(el.SubjectKey, _activeSubjectKey, StringComparison.OrdinalIgnoreCase));
+                if (subjElem != null)
+                {
+                    NavigateToElement(subjElem);
+                }
             }
         }
 
@@ -738,14 +736,40 @@ namespace TableLamp.Views
             string newJson = _generator.GenerateJson(_tree);
             SetJsonText(newJson);
 
-            if (!string.IsNullOrEmpty(targetKeyToSelect))
+            var elements = ScanElementPositions(newJson);
+            DevElementPosition? target = null;
+
+            if (!string.IsNullOrEmpty(_activeTopicKey) && !string.IsNullOrEmpty(_activeChapterKey) && !string.IsNullOrEmpty(_activeSubjectKey))
+            {
+                target = elements.FirstOrDefault(el => el.Type == "Topic" &&
+                                                       string.Equals(el.SubjectKey, _activeSubjectKey, StringComparison.OrdinalIgnoreCase) &&
+                                                       string.Equals(el.ChapterKey, _activeChapterKey, StringComparison.OrdinalIgnoreCase) &&
+                                                       string.Equals(el.TopicKey, _activeTopicKey, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (!string.IsNullOrEmpty(_activeChapterKey) && !string.IsNullOrEmpty(_activeSubjectKey))
+            {
+                target = elements.FirstOrDefault(el => el.Type == "Chapter" &&
+                                                       string.Equals(el.SubjectKey, _activeSubjectKey, StringComparison.OrdinalIgnoreCase) &&
+                                                       string.Equals(el.ChapterKey, _activeChapterKey, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (!string.IsNullOrEmpty(_activeSubjectKey))
+            {
+                target = elements.FirstOrDefault(el => el.Type == "Subject" &&
+                                                       string.Equals(el.SubjectKey, _activeSubjectKey, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (target != null)
+            {
+                NavigateToElement(target);
+            }
+            else if (!string.IsNullOrEmpty(targetKeyToSelect))
             {
                 int index = newJson.IndexOf(targetKeyToSelect, StringComparison.OrdinalIgnoreCase);
                 if (index >= 0)
                 {
                     JsonPreviewBox.Focus(FocusState.Programmatic);
                     JsonPreviewBox.SelectionStart = index;
-                    JsonPreviewBox.SelectionLength = 0; // Do NOT select the whole text
+                    JsonPreviewBox.SelectionLength = 0;
                     DetectContextFromSelection();
                 }
             }
@@ -793,7 +817,7 @@ namespace TableLamp.Views
 
             string json = _generator.GenerateJson(_tree);
             SetJsonText(json);
-            MoveCaretToToken("\"Subject1\":");
+            RefreshJsonPreview();
             ShowStatus("Started afresh with dummy subject, chapter, and topic.", InfoBarSeverity.Success);
         }
 
@@ -847,11 +871,13 @@ namespace TableLamp.Views
 
         private async void OnSaveJsonClicked(object sender, RoutedEventArgs e)
         {
+            SyncTreeFromPreviewText();
+
             if (!string.IsNullOrEmpty(_activeFilePath))
             {
                 try
                 {
-                    string json = _generator.GenerateJson(_tree);
+                    string json = !string.IsNullOrWhiteSpace(JsonPreviewBox.Text) ? JsonPreviewBox.Text : _generator.GenerateJson(_tree);
                     File.WriteAllText(_activeFilePath, json);
                     ShowStatus($"Saved JSON to: {Path.GetFileName(_activeFilePath)}", InfoBarSeverity.Success);
                     return;
@@ -1078,9 +1104,7 @@ namespace TableLamp.Views
 
         private void ShowStatus(string message, InfoBarSeverity severity)
         {
-            StatusInfoBar.Message = message;
-            StatusInfoBar.Severity = severity;
-            StatusInfoBar.IsOpen = true;
+            NotificationCard.Show(message, severity);
         }
 
         #endregion

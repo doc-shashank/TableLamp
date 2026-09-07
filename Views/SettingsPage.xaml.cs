@@ -199,9 +199,7 @@ namespace TableLamp.Views
 
         private void ShowStatus(string message, InfoBarSeverity severity)
         {
-            SettingsStatusInfoBar.Message = message;
-            SettingsStatusInfoBar.Severity = severity;
-            SettingsStatusInfoBar.IsOpen = true;
+            NotificationCard.Show(message, severity);
         }
     }
 }

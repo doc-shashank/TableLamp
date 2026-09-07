@@ -78,6 +78,7 @@ namespace TableLamp.Services
         public bool IsCuratedSubject(string? subjectName)
         {
             if (string.IsNullOrWhiteSpace(subjectName)) return false;
+            string clean = subjectName.Trim();
 
             var tree = PresetTagDatabase.Instance.GetTree();
             if (tree == null || tree.Count == 0)
@@ -87,15 +88,15 @@ namespace TableLamp.Services
 
             foreach (var kvp in tree)
             {
-                if (string.Equals(kvp.Key, subjectName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(kvp.Key.Trim(), clean, StringComparison.OrdinalIgnoreCase))
                     return true;
 
                 if (!string.IsNullOrWhiteSpace(kvp.Value.short_name) &&
-                    string.Equals(kvp.Value.short_name, subjectName, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(kvp.Value.short_name.Trim(), clean, StringComparison.OrdinalIgnoreCase))
                     return true;
 
                 if (!string.IsNullOrWhiteSpace(kvp.Value.full_name) &&
-                    string.Equals(kvp.Value.full_name, subjectName, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(kvp.Value.full_name.Trim(), clean, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
 

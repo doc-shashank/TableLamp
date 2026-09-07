@@ -20,36 +20,36 @@
                 <!-- CardButton 1: Create a New Session -->
                 <Border x:Name="CreateSessionCardButton"
                         Grid.Column="0"
-                        Height="180"
+                        Height="250"
                         CornerRadius="16"
                         BorderThickness="1.5"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Padding="24"
+                        Padding="26"
                         IsHitTestVisible="True">
                     <Grid RowDefinitions="Auto,*,Auto">
                         <Border Grid.Row="0"
-                                Width="48"
-                                Height="48"
-                                CornerRadius="12"
+                                Width="54"
+                                Height="54"
+                                CornerRadius="14"
                                 Background="{ThemeResource AccentFillColorDefaultBrush}"
                                 HorizontalAlignment="Left">
-                            <FontIcon Glyph="&#xE710;" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <FontIcon Glyph="&#xE710;" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Row="1" Spacing="4" VerticalAlignment="Center" Margin="0,12,0,0">
+                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,16,0,12">
                             <TextBlock Text="Create a New Session"
-                                       FontSize="19"
+                                       FontSize="21"
                                        FontWeight="Bold" />
-                            <TextBlock Text="Configure subject, chapter, and author question cards"
-                                       FontSize="12"
+                            <TextBlock Text="Configure subject, chapter, and author question cards with active recall tags"
+                                       FontSize="13"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
 
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                            <TextBlock Text="Get Started" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Get Started" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -57,38 +57,38 @@
                 <!-- CardButton 2: Review Session -->
                 <Border x:Name="ReviewSessionCardButton"
                         Grid.Column="1"
-                        Height="180"
+                        Height="250"
                         CornerRadius="16"
                         BorderThickness="1.5"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Padding="24"
+                        Padding="26"
                         IsHitTestVisible="True">
                     <Grid RowDefinitions="Auto,*,Auto">
                         <Border Grid.Row="0"
-                                Width="48"
-                                Height="48"
-                                CornerRadius="12"
+                                Width="54"
+                                Height="54"
+                                CornerRadius="14"
                                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 HorizontalAlignment="Left">
-                            <FontIcon Glyph="&#xE768;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <FontIcon Glyph="&#xE768;" FontSize="22" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Row="1" Spacing="4" VerticalAlignment="Center" Margin="0,12,0,0">
+                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,16,0,12">
                             <TextBlock Text="Review Session"
-                                       FontSize="19"
+                                       FontSize="21"
                                        FontWeight="Bold" />
-                            <TextBlock Text="Practice and test active recall across your prepared questions"
-                                       FontSize="12"
+                            <TextBlock Text="Practice and test active recall across your prepared questions and past sessions"
+                                       FontSize="13"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
 
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                            <TextBlock Text="Browse Sessions" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Browse Sessions" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Border>

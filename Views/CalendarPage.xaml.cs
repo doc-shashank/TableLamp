@@ -45,14 +45,26 @@ namespace TableLamp.Views
         {
             SelectedDateHeaderText.Text = $"Sessions for {date:MMMM dd, yyyy}";
 
-            var sessions = SessionService.Instance.GetSessionsByDate(date);
-            DaySessionsItemsControl.ItemsSource = sessions;
+            var allSessions = SessionService.Instance.GetSessionsByDate(date);
+            var selfSessions = allSessions.Where(s => s.IsSelfSession).ToList();
+            var classSessions = allSessions.Where(s => s.IsClassSession).ToList();
 
-            bool hasSessions = sessions.Count > 0;
-            EmptyDayBorder.Visibility = hasSessions ? Visibility.Collapsed : Visibility.Visible;
-            DaySessionsItemsControl.Visibility = hasSessions ? Visibility.Visible : Visibility.Collapsed;
-            SelectedDateSubtext.Text = hasSessions
-                ? $"{sessions.Count} session{(sessions.Count == 1 ? "" : "s")} recorded on this day"
+            SelfSessionsItemsControl.ItemsSource = selfSessions;
+            ClassSessionsItemsControl.ItemsSource = classSessions;
+
+            SelfSessionsCountText.Text = selfSessions.Count.ToString();
+            ClassSessionsCountText.Text = classSessions.Count.ToString();
+
+            bool hasAny = allSessions.Count > 0;
+            EmptyDayBorder.Visibility = hasAny ? Visibility.Collapsed : Visibility.Visible;
+            SelfSessionsGroup.Visibility = hasAny ? Visibility.Visible : Visibility.Collapsed;
+            ClassSessionsGroup.Visibility = hasAny ? Visibility.Visible : Visibility.Collapsed;
+
+            NoSelfSessionsText.Visibility = selfSessions.Count == 0 && hasAny ? Visibility.Visible : Visibility.Collapsed;
+            NoClassSessionsText.Visibility = classSessions.Count == 0 && hasAny ? Visibility.Visible : Visibility.Collapsed;
+
+            SelectedDateSubtext.Text = hasAny
+                ? $"{allSessions.Count} session{(allSessions.Count == 1 ? "" : "s")} recorded ({selfSessions.Count} Self, {classSessions.Count} Class)"
                 : "No study activity recorded on this day";
         }
 

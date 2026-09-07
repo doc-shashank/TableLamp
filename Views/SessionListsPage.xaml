@@ -8,47 +8,44 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header -->
-        <Border Grid.Row="0"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1"
-                Background="{ThemeResource LayerFillColorDefaultBrush}"
-                Padding="32,16,32,16">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Button x:Name="BackButton"
-                            Style="{ThemeResource SubtleButtonStyle}"
-                            Padding="8,6"
-                            ToolTipService.ToolTip="Back to Dashboard">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE72B;" FontSize="14" />
-                            <TextBlock Text="Dashboard" FontSize="13" />
-                        </StackPanel>
-                    </Button>
-                    <Rectangle Width="1" Height="20" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="4,0" />
-                    <TextBlock Text="Review Sessions" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+    <Grid>
+        <!-- Sessions List & Centered Header -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="980" HorizontalAlignment="Center" Spacing="20" Margin="32,24,32,48">
+                <!-- Header (Top navigation button + Header in center flow) -->
+                <StackPanel Spacing="6">
+                    <Grid Margin="0,0,0,8">
+                        <Button x:Name="BackButton"
+                                Style="{ThemeResource SubtleButtonStyle}"
+                                Padding="8,6"
+                                HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                                <TextBlock Text="Back to Dashboard" FontSize="13" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="CreateNewSessionButton"
+                                HorizontalAlignment="Right"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                Padding="14,6">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE710;" FontSize="13" />
+                                <TextBlock Text="Create New Session" FontWeight="SemiBold" FontSize="13" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="Review Sessions" FontSize="26" FontWeight="Bold" />
+                    <TextBlock Text="Browse, search, and review your study sessions."
+                               FontSize="14"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
 
-                <Button x:Name="CreateNewSessionButton"
-                        Grid.Column="2"
-                        Style="{ThemeResource AccentButtonStyle}"
-                        Padding="16,8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE710;" FontSize="14" />
-                        <TextBlock Text="Create New Session" FontWeight="SemiBold" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-        </Border>
-
-        <!-- Sessions List -->
-        <ScrollViewer Grid.Row="1" Padding="32,24,32,48">
-            <StackPanel MaxWidth="840" HorizontalAlignment="Center" Spacing="16">
                 <!-- Search Box -->
                 <TextBox x:Name="SearchBox"
                          PlaceholderText="Search sessions by subject or chapter..."
-                         Margin="0,0,0,8" />
+                         Margin="0,4,0,0" />
 
                 <!-- Empty State -->
                 <Border x:Name="EmptyStateBorder"
@@ -97,9 +94,19 @@
                                         <TextBlock Text="{Binding DisplayTitle}"
                                                    FontSize="16"
                                                    FontWeight="SemiBold" />
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <TextBlock Text="{Binding FormattedDate}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="6,2">
+                                                <TextBlock Text="{Binding SessionTypeName}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </Border>
+                                            <TextBlock Text="{Binding FormattedDate}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                             <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                                                     CornerRadius="4"
                                                     Padding="6,2">

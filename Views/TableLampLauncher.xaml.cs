@@ -1,7 +1,9 @@
 using System;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using WinRT.Interop;
@@ -9,7 +11,7 @@ using WinRT.Interop;
 namespace TableLamp.Views
 {
     /// <summary>
-    /// TableLampLauncher is the initial window displaying three horizontal card containers:
+    /// TableLampLauncher is the initial compact window displaying three horizontal card containers:
     /// 'Basic', 'Advanced', and 'Generator'.
     /// Containers listen to mouse events and act as buttons.
     /// Advanced and Generator cards are non-interactable (for now).
@@ -25,7 +27,11 @@ namespace TableLamp.Views
 
             ConfigureLauncherWindow();
             WireCardMouseEvents();
+            WireCaptionButtons();
         }
+
+        [DllImport("user32.dll")]
+        private static extern uint GetDpiForWindow(IntPtr hWnd);
 
         private void ConfigureLauncherWindow()
         {
@@ -41,29 +47,33 @@ namespace TableLamp.Views
                     {
                         _appWindow.Title = "Table Lamp Launcher";
 
-                        // Custom title bar without dragging per requirement
-                        ExtendsContentIntoTitleBar = true;
-                        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
-                        _appWindow.TitleBar.SetDragRectangles(Array.Empty<Windows.Graphics.RectInt32>());
-                        
-                        const int width = 1000;
-                        const int height = 620;
-                        _appWindow.Resize(new Windows.Graphics.SizeInt32(width, height));
+                        // Border-only window without native titlebar or native caption buttons
+                        if (_appWindow.Presenter is OverlappedPresenter presenter)
+                        {
+                            presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
+                            presenter.IsResizable = false;
+                            presenter.IsMaximizable = false;
+                        }
+
+                        // Determine display scaling for DPI-aware sizing
+                        uint dpi = GetDpiForWindow(hwnd);
+                        double scale = (dpi > 0 ? dpi : 96) / 96.0;
+
+                        const int targetWidthDip = 820;
+                        const int targetHeightDip = 500;
+
+                        int physWidth = (int)Math.Round(targetWidthDip * scale);
+                        int physHeight = (int)Math.Round(targetHeightDip * scale);
+                        _appWindow.Resize(new Windows.Graphics.SizeInt32(physWidth, physHeight));
 
                         // Center on display work area
                         var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
                         if (displayArea != null)
                         {
                             var position = _appWindow.Position;
-                            position.X = Math.Max(0, (displayArea.WorkArea.Width - width) / 2);
-                            position.Y = Math.Max(0, (displayArea.WorkArea.Height - height) / 2);
+                            position.X = Math.Max(0, (displayArea.WorkArea.Width - physWidth) / 2);
+                            position.Y = Math.Max(0, (displayArea.WorkArea.Height - physHeight) / 2);
                             _appWindow.Move(position);
-                        }
-
-                        if (_appWindow.Presenter is OverlappedPresenter presenter)
-                        {
-                            presenter.IsResizable = false;
-                            presenter.IsMaximizable = false;
                         }
                     }
                 }
@@ -72,6 +82,40 @@ namespace TableLamp.Views
             {
                 // Fallback for headless or test environments
             }
+        }
+
+        private void WireCaptionButtons()
+        {
+            WindowMinimizeButton.Click += (s, e) =>
+            {
+                if (_appWindow?.Presenter is OverlappedPresenter presenter)
+                {
+                    presenter.Minimize();
+                }
+            };
+
+            WindowExitButton.Click += (s, e) =>
+            {
+                this.Close();
+            };
+
+            WindowExitButton.PointerEntered += (s, e) =>
+            {
+                WindowExitButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 232, 17, 35));
+                if (WindowExitButton.Content is FontIcon icon)
+                {
+                    icon.Foreground = new SolidColorBrush(Colors.White);
+                }
+            };
+
+            WindowExitButton.PointerExited += (s, e) =>
+            {
+                WindowExitButton.Background = new SolidColorBrush(Colors.Transparent);
+                if (WindowExitButton.Content is FontIcon icon)
+                {
+                    icon.ClearValue(FontIcon.ForegroundProperty);
+                }
+            };
         }
 
         private void WireCardMouseEvents()
@@ -175,6 +219,11 @@ namespace TableLamp.Views
             var mainScreen = new MainScreen(modeArgument);
             mainScreen.Activate();
             this.Close();
+        }
+
+        public void ShowNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Informational, string? title = null)
+        {
+            NotificationCard.Show(message, severity, title);
         }
     }
 }

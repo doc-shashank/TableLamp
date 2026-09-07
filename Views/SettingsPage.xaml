@@ -4,23 +4,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:TableLamp.Views"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="800" HorizontalAlignment="Center" Spacing="24" Margin="32,24,32,48">
-            <!-- Header -->
-            <StackPanel Spacing="6">
-                <TextBlock Text="Settings &amp; Preset Database" FontSize="26" FontWeight="Bold" />
-                <TextBlock Text="Feed JSON files to build the preset database, import entire folders, or format database to start afresh."
-                           FontSize="14"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-
-            <!-- Status InfoBar -->
-            <InfoBar x:Name="SettingsStatusInfoBar"
-                     IsOpen="False"
-                     IsClosable="True" />
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="800" HorizontalAlignment="Center" Spacing="24" Margin="32,24,32,48">
+                <!-- Header -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Settings &amp; Preset Database" FontSize="26" FontWeight="Bold" />
+                    <TextBlock Text="Feed JSON files to build the preset database, import entire folders, or format database to start afresh."
+                               FontSize="14"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
 
             <!-- Database Overview Card -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -206,4 +203,12 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+
+        <!-- Floating Notification Card floating at top of page on Left -->
+        <local:FloatingNotificationCard x:Name="NotificationCard"
+                                        VerticalAlignment="Top"
+                                        HorizontalAlignment="Left"
+                                        Margin="24,16,0,0"
+                                        Canvas.ZIndex="1000" />
+    </Grid>
 </Page>

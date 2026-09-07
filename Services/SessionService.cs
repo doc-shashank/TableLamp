@@ -125,8 +125,8 @@ namespace TableLamp.Services
         {
             _sessions.Clear();
 
-            // Sample 1: Physics (Today)
-            var tag1 = new Tag(1, "Physics", 1, "Kinematics", "Projectile Motion");
+            // Sample 1: Physics - Self Session (Today)
+            var tag1 = new Tag(1, "Physics", 1, "Kinematics", "Projectile Motion", null, null, Tag.SelfSession);
             var q1 = new SimpleQuestion("State the independence of horizontal and vertical velocities in ideal projectile motion.", null, tag1);
             var q2 = new SimpleQuestion("What is the formula for maximum height attained by a projectile launched at angle θ?", null, tag1);
             var session1 = new BasicSessionBundle(new[] { q1, q2 }, false, DateTime.UtcNow.AddDays(2), "Kinematics Warmup", tag1)
@@ -135,17 +135,26 @@ namespace TableLamp.Services
                 creation_date = DateTime.UtcNow
             };
 
-            // Sample 2: Chemistry (Yesterday)
-            var tag2 = new Tag(2, "Chemistry", 3, "Chemical Bonding", "Ionic vs Covalent");
+            // Sample 2: Biology - Class Session (Today)
+            var tagClass = new Tag(4, "Biology", 2, "Cell Biology", "Mitochondrial Function", null, null, Tag.ClassSession);
+            var qClass = new SimpleQuestion("Describe the role of the proton gradient across the inner mitochondrial membrane in ATP synthesis.", null, tagClass);
+            var sessionClass = new BasicSessionBundle(new[] { qClass }, false, DateTime.UtcNow.AddDays(1), "Cell Bio Lecture Notes", tagClass)
+            {
+                Id = "sample-4",
+                creation_date = DateTime.UtcNow
+            };
+
+            // Sample 3: Chemistry - Class Session (Yesterday)
+            var tag2 = new Tag(2, "Chemistry", 3, "Chemical Bonding", "Ionic vs Covalent", null, null, Tag.ClassSession);
             var q3 = new SimpleQuestion("Explain why ionic compounds have higher melting points compared to molecular covalent compounds.", null, tag2);
-            var session2 = new BasicSessionBundle(new[] { q3 }, false, DateTime.UtcNow.AddDays(4), "Chemical Bonding Review", tag2)
+            var session2 = new BasicSessionBundle(new[] { q3 }, false, DateTime.UtcNow.AddDays(4), "Chemical Bonding Lecture", tag2)
             {
                 Id = "sample-2",
                 creation_date = DateTime.UtcNow.AddDays(-1)
             };
 
-            // Sample 3: Mathematics (2 Days ago)
-            var tag3 = new Tag(3, "Mathematics", 5, "Differential Calculus", "Chain Rule");
+            // Sample 4: Mathematics - Self Session (2 Days ago)
+            var tag3 = new Tag(3, "Mathematics", 5, "Differential Calculus", "Chain Rule", null, null, Tag.SelfSession);
             var q4 = new SimpleQuestion("Compute the derivative of f(x) = sin(x^2 + 3x).", null, tag3);
             var q5 = new SimpleQuestion("State the conditions under which Rolle's Theorem is applicable.", null, tag3);
             var session3 = new BasicSessionBundle(new[] { q4, q5 }, false, DateTime.UtcNow.AddDays(7), "Calculus Mastery", tag3)
@@ -155,6 +164,7 @@ namespace TableLamp.Services
             };
 
             _sessions.Add(session1);
+            _sessions.Add(sessionClass);
             _sessions.Add(session2);
             _sessions.Add(session3);
 
@@ -171,6 +181,7 @@ namespace TableLamp.Services
             public DateTime? NextReviewDate { get; set; }
             public bool IsCurated { get; set; }
             public TagDto? Tag { get; set; }
+            public List<TagDto> Tags { get; set; } = new();
             public List<QuestionDto> Questions { get; set; } = new();
         }
 
@@ -181,6 +192,9 @@ namespace TableLamp.Services
             public int ChapterNumber { get; set; }
             public string? ChapterName { get; set; }
             public string? TopicName { get; set; }
+            public string? BookName { get; set; }
+            public string? PageRange { get; set; }
+            public int SessionType { get; set; }
         }
 
         private class QuestionDto
@@ -191,8 +205,30 @@ namespace TableLamp.Services
             public bool IsEditable { get; set; }
         }
 
+        private static TagDto ToTagDto(Tag t) => new()
+        {
+            Id = t.id,
+            SubjectName = t.subject_name,
+            ChapterNumber = t.chapter_number,
+            ChapterName = t.chapter_name,
+            TopicName = t.topic_name,
+            BookName = t.book_name,
+            PageRange = t.page_range,
+            SessionType = t.session_type
+        };
+
+        private static Tag FromTagDto(TagDto d) =>
+            new(d.Id, d.SubjectName, d.ChapterNumber, d.ChapterName, d.TopicName, d.BookName, d.PageRange, d.SessionType);
+
         private SessionDto ToDto(BasicSessionBundle s)
         {
+            var tagDto = s.Tag == null ? null : ToTagDto(s.Tag);
+            var tagsDtos = s.Tags.Select(ToTagDto).ToList();
+            if (tagsDtos.Count == 0 && tagDto != null)
+            {
+                tagsDtos.Add(tagDto);
+            }
+
             return new SessionDto
             {
                 Id = s.Id,
@@ -200,14 +236,8 @@ namespace TableLamp.Services
                 CreationDate = s.creation_date,
                 NextReviewDate = s.next_review_date,
                 IsCurated = s.isCurated,
-                Tag = s.Tag == null ? null : new TagDto
-                {
-                    Id = s.Tag.id,
-                    SubjectName = s.Tag.subject_name,
-                    ChapterNumber = s.Tag.chapter_number,
-                    ChapterName = s.Tag.chapter_name,
-                    TopicName = s.Tag.topic_name
-                },
+                Tag = tagDto,
+                Tags = tagsDtos,
                 Questions = s.questions.OfType<SimpleQuestion>().Select(q => new QuestionDto
                 {
                     Id = q.Id,
@@ -226,9 +256,13 @@ namespace TableLamp.Services
             var result = new List<BasicSessionBundle>();
             foreach (var d in dtos)
             {
-                var tag = d.Tag == null ? null : new Tag(d.Tag.Id, d.Tag.SubjectName, d.Tag.ChapterNumber, d.Tag.ChapterName, d.Tag.TopicName);
-                var questions = d.Questions.Select(q => new SimpleQuestion(q.Text, q.ImagePath, tag, q.IsEditable) { Id = q.Id }).ToList();
-                var session = new BasicSessionBundle(questions, d.IsCurated, d.NextReviewDate, d.SessionName, tag)
+                var tags = (d.Tags != null && d.Tags.Count > 0)
+                    ? d.Tags.Select(FromTagDto).ToList()
+                    : (d.Tag != null ? new List<Tag> { FromTagDto(d.Tag) } : new List<Tag>());
+
+                var primaryTag = tags.FirstOrDefault();
+                var questions = d.Questions.Select(q => new SimpleQuestion(q.Text, q.ImagePath, primaryTag, q.IsEditable) { Id = q.Id }).ToList();
+                var session = new BasicSessionBundle(questions, d.IsCurated, d.NextReviewDate, d.SessionName, primaryTag, tags)
                 {
                     Id = d.Id,
                     creation_date = d.CreationDate
