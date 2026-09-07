@@ -10,18 +10,6 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel MaxWidth="900" HorizontalAlignment="Center" Spacing="32" Margin="32,36,32,48">
-            <!-- Welcome Header -->
-            <StackPanel Spacing="6" HorizontalAlignment="Center">
-                <TextBlock Text="Table Lamp Workspace"
-                           FontSize="28"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center" />
-                <TextBlock Text="Plan, create, and review your study sessions"
-                           FontSize="14"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
-
             <!-- Two Centralized CardButtons -->
             <Grid ColumnSpacing="24" HorizontalAlignment="Center">
                 <Grid.ColumnDefinitions>

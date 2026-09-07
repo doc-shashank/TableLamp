@@ -40,6 +40,11 @@ namespace TableLamp.Views
                     if (_appWindow != null)
                     {
                         _appWindow.Title = "Table Lamp Launcher";
+
+                        // Custom title bar without dragging per requirement
+                        ExtendsContentIntoTitleBar = true;
+                        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+                        _appWindow.TitleBar.SetDragRectangles(Array.Empty<Windows.Graphics.RectInt32>());
                         
                         const int width = 1000;
                         const int height = 620;
@@ -92,8 +97,8 @@ namespace TableLamp.Views
 
         private void OnDevToolsButtonClicked(object sender, RoutedEventArgs e)
         {
-            // Open maximized DevToolsWindow
-            var devTools = new DevToolsWindow();
+            // Open singleton maximized DevToolsWindow
+            var devTools = DevToolsWindow.GetOrCreateInstance();
             devTools.Activate();
         }
 

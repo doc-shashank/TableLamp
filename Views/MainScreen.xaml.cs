@@ -52,6 +52,11 @@ namespace TableLamp.Views
                     {
                         AppWindowInstance.Title = $"Table Lamp - {InvocationMode}";
 
+                        // Custom title bar without dragging per requirement
+                        ExtendsContentIntoTitleBar = true;
+                        AppWindowInstance.TitleBar.ExtendsContentIntoTitleBar = true;
+                        AppWindowInstance.TitleBar.SetDragRectangles(Array.Empty<Windows.Graphics.RectInt32>());
+
                         // Closing the main window should open the launcher and not exit the app
                         AppWindowInstance.Closing += (s, args) =>
                         {
@@ -100,6 +105,7 @@ namespace TableLamp.Views
 
             DashboardNavButton.Click += (s, e) => NavigateToDashboard();
             CalendarNavButton.Click += (s, e) => NavigateToCalendar();
+            SettingsNavButton.Click += (s, e) => NavigateToSettings();
 
             ThemeToggleButton.Click += (s, e) =>
             {
@@ -118,9 +124,11 @@ namespace TableLamp.Views
         {
             bool isDashboard = e.SourcePageType == typeof(DashboardPage);
             bool isCalendar = e.SourcePageType == typeof(CalendarPage);
+            bool isSettings = e.SourcePageType == typeof(SettingsPage);
 
             DashboardNavButton.Style = (Style)Application.Current.Resources[isDashboard ? "DefaultButtonStyle" : "SubtleButtonStyle"];
             CalendarNavButton.Style = (Style)Application.Current.Resources[isCalendar ? "DefaultButtonStyle" : "SubtleButtonStyle"];
+            SettingsNavButton.Style = (Style)Application.Current.Resources[isSettings ? "DefaultButtonStyle" : "SubtleButtonStyle"];
         }
 
         public void NavigateToDashboard()
@@ -131,6 +139,11 @@ namespace TableLamp.Views
         public void NavigateToCalendar()
         {
             RootFrame.Navigate(typeof(CalendarPage));
+        }
+
+        public void NavigateToSettings()
+        {
+            RootFrame.Navigate(typeof(SettingsPage));
         }
     }
 }

@@ -80,6 +80,11 @@ namespace TableLamp.Services
             if (string.IsNullOrWhiteSpace(subjectName)) return false;
 
             var tree = PresetTagDatabase.Instance.GetTree();
+            if (tree == null || tree.Count == 0)
+            {
+                tree = new PresetTagGenerator().Parse(new PresetTagGenerator().CreateStarterPresetJson());
+            }
+
             foreach (var kvp in tree)
             {
                 if (string.Equals(kvp.Key, subjectName, StringComparison.OrdinalIgnoreCase))

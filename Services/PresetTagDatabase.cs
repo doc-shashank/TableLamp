@@ -108,5 +108,135 @@ namespace TableLamp.Services
         {
             return _generator.GenerateJson(_inMemoryTree);
         }
+
+        public string StoragePath => _storagePath;
+        public int SubjectCount => _inMemoryTree.Count;
+        public int ChapterCount => _inMemoryTree.Values.Sum(s => s.Chapters?.Count ?? 0);
+        public int TopicCount => _inMemoryTree.Values.Sum(s => s.Chapters?.Values.Sum(c => c.Topics?.Count ?? 0) ?? 0);
+
+        /// <summary>
+        /// Merges an external preset tree into the active database.
+        /// </summary>
+        public void MergeTree(Dictionary<string, PresetSubject> otherTree)
+        {
+            if (otherTree == null) return;
+
+            foreach (var (subjKey, otherSubj) in otherTree)
+            {
+                if (!_inMemoryTree.TryGetValue(subjKey, out var existingSubj))
+                {
+                    _inMemoryTree[subjKey] = otherSubj;
+                }
+                else
+                {
+                    // Merge subject attributes if updated
+                    if (!string.IsNullOrWhiteSpace(otherSubj.short_name)) existingSubj.short_name = otherSubj.short_name;
+                    if (!string.IsNullOrWhiteSpace(otherSubj.full_name)) existingSubj.full_name = otherSubj.full_name;
+                    if (!string.IsNullOrWhiteSpace(otherSubj.edition)) existingSubj.edition = otherSubj.edition;
+
+                    if (otherSubj.Chapters != null)
+                    {
+                        existingSubj.Chapters ??= new Dictionary<string, PresetChapter>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var (chKey, otherCh) in otherSubj.Chapters)
+                        {
+                            if (!existingSubj.Chapters.TryGetValue(chKey, out var existingCh))
+                            {
+                                existingSubj.Chapters[chKey] = otherCh;
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrWhiteSpace(otherCh.name)) existingCh.name = otherCh.name;
+                                if (otherCh.Topics != null)
+                                {
+                                    existingCh.Topics ??= new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase);
+                                    foreach (var (topKey, otherTop) in otherCh.Topics)
+                                    {
+                                        existingCh.Topics[topKey] = otherTop;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            SaveTree(_inMemoryTree);
+        }
+
+        /// <summary>
+        /// Imports multiple JSON files into the database.
+        /// </summary>
+        public (int success, int failed) ImportJsonFiles(IEnumerable<string> filePaths)
+        {
+            int success = 0;
+            int failed = 0;
+
+            if (filePaths == null) return (success, failed);
+
+            foreach (var file in filePaths)
+            {
+                try
+                {
+                    if (File.Exists(file))
+                    {
+                        string json = File.ReadAllText(file);
+                        var tree = _generator.Parse(json);
+                        if (tree.Count > 0)
+                        {
+                            MergeTree(tree);
+                            success++;
+                        }
+                        else
+                        {
+                            failed++;
+                        }
+                    }
+                    else
+                    {
+                        failed++;
+                    }
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            return (success, failed);
+        }
+
+        /// <summary>
+        /// Recursively scans a directory for all .json files and feeds them into the database.
+        /// </summary>
+        public (int totalFound, int success, int failed) ImportDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                return (0, 0, 0);
+            }
+
+            var files = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
+            var (success, failed) = ImportJsonFiles(files);
+            return (files.Length, success, failed);
+        }
+
+        /// <summary>
+        /// Formats and resets the database to an empty state.
+        /// </summary>
+        public void FormatDatabase()
+        {
+            _inMemoryTree.Clear();
+            SaveTree(_inMemoryTree);
+        }
+
+        /// <summary>
+        /// Restores canonical starter presets.
+        /// </summary>
+        public void ResetToStarterPresets()
+        {
+            string starterJson = _generator.CreateStarterPresetJson();
+            _inMemoryTree = _generator.Parse(starterJson);
+            SaveTree(_inMemoryTree);
+        }
     }
 }

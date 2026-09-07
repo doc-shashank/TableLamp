@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -9,13 +10,36 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using TableLamp.Models;
 using TableLamp.Services;
-using Windows.ApplicationModel.DataTransfer;
 using WinRT.Interop;
 
 namespace TableLamp.Views
 {
     public sealed partial class DevToolsWindow : Window
     {
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        private static DevToolsWindow? _activeInstance;
+        public static DevToolsWindow? ActiveInstance => _activeInstance;
+
+        public static DevToolsWindow GetOrCreateInstance()
+        {
+            if (_activeInstance != null)
+            {
+                _activeInstance.Activate();
+                IntPtr hwnd = WindowNative.GetWindowHandle(_activeInstance);
+                if (hwnd != IntPtr.Zero)
+                {
+                    SetForegroundWindow(hwnd);
+                }
+                return _activeInstance;
+            }
+
+            _activeInstance = new DevToolsWindow();
+            _activeInstance.Closed += (s, e) => { _activeInstance = null; };
+            return _activeInstance;
+        }
+
         private AppWindow? _appWindow;
         private readonly PresetTagGenerator _generator = new();
         private Dictionary<string, PresetSubject> _tree = new(StringComparer.OrdinalIgnoreCase);
@@ -23,7 +47,15 @@ namespace TableLamp.Views
         private string? _activeSubjectKey;
         private string? _activeChapterKey;
         private string? _activeTopicKey;
+        private string? _activeFilePath;
+        private string? _activeWorkspaceDir;
+
         private bool _isUpdatingPreviewText;
+
+        // Navigation history
+        private readonly List<string> _navigationHistory = new();
+        private int _historyIndex = -1;
+        private bool _isNavigatingHistory;
 
         public DevToolsWindow()
         {
@@ -47,7 +79,12 @@ namespace TableLamp.Views
                     {
                         _appWindow.Title = "Table Lamp - Developer Tools & Preset Tag Generator";
 
-                        // Maximize the dev tools window per requirement
+                        // Custom title bar without dragging per requirement
+                        ExtendsContentIntoTitleBar = true;
+                        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+                        _appWindow.TitleBar.SetDragRectangles(Array.Empty<Windows.Graphics.RectInt32>());
+
+                        // Maximize the window
                         if (_appWindow.Presenter is OverlappedPresenter presenter)
                         {
                             presenter.Maximize();
@@ -57,13 +94,12 @@ namespace TableLamp.Views
             }
             catch (Exception)
             {
-                // Fallback for non-standard environments
+                // Fallback
             }
         }
 
         private void InitializeEditor()
         {
-            // Load current presets from database
             string currentJson = PresetTagDatabase.Instance.ExportJson();
             _tree = _generator.Parse(currentJson);
             SetJsonText(currentJson);
@@ -74,19 +110,41 @@ namespace TableLamp.Views
             JsonPreviewBox.PointerReleased += (s, e) => DetectContextFromSelection();
 
             // Wire toolbar actions
-            SaveToDatabaseButton.Click += OnSaveToDatabaseClicked;
-            LoadStarterButton.Click += OnLoadStarterClicked;
-            CopyJsonButton.Click += OnCopyJsonClicked;
-            ExportJsonButton.Click += OnExportJsonClicked;
-            CloseButton.Click += (s, e) => this.Close();
+            StartFromScratchButton.Click += OnStartFromScratchClicked;
+            OpenJsonFileButton.Click += OnOpenJsonFileClicked;
+            SaveJsonButton.Click += OnSaveJsonClicked;
+
+            // Wire File menu actions
+            MenuNewWorkspace.Click += OnNewWorkspaceClicked;
+            MenuOpenWorkspace.Click += OnOpenWorkspaceClicked;
+            MenuNewJsonFile.Click += OnNewJsonFileClicked;
+            MenuOpenJsonFile.Click += OnOpenJsonFileClicked;
+            MenuSaveJsonFile.Click += OnSaveJsonClicked;
+
+            // Workspace context flyout
+            ContextNewJsonFile.Click += OnNewJsonFileClicked;
+            ContextNewFolder.Click += OnNewFolderClicked;
+            ContextRefreshWorkspace.Click += (s, e) => RefreshWorkspaceFiles();
+            CloseWorkspaceButton.Click += (s, e) => CloseWorkspace();
+            WorkspaceFilesListView.ItemClick += OnWorkspaceFileClicked;
+            WorkspaceFilesListView.IsItemClickEnabled = true;
+
+            // Wire Navigation buttons (Next / Previous Element)
+            NextElementButton.Click += OnNextElementClicked;
+            PreviousElementButton.Click += OnPreviousElementClicked;
+
+            // History back & forward buttons
+            HistoryBackButton.Click += OnHistoryBackClicked;
+            HistoryForwardButton.Click += OnHistoryForwardClicked;
 
             // Wire Subject panel actions
             UpdateSubjectButton.Click += OnUpdateSubjectClicked;
             AddChapterButton.Click += OnAddChapterClicked;
 
             // Wire Chapter panel actions
+            ChapterParentSubjectButton.Click += OnChapterParentSubjectClicked;
             UpdateChapterButton.Click += OnUpdateChapterClicked;
-            AddTopicFromChapterButton.Click += OnAddTopicFromChapterClicked;
+            AddTopicFromChapterButton.Click += OnAddTopicClicked;
 
             // Wire Topic panel actions
             UpdateTopicButton.Click += OnUpdateTopicClicked;
@@ -95,7 +153,7 @@ namespace TableLamp.Views
             // Wire Root / General actions
             AddSubjectButton.Click += OnAddSubjectClicked;
 
-            // Initial context detection
+            // Initial detection
             DetectContextFromSelection();
         }
 
@@ -114,6 +172,9 @@ namespace TableLamp.Views
             }
         }
 
+        /// <summary>
+        /// Accurately detects line index and hierarchy context without selecting the whole line text.
+        /// </summary>
         private void DetectContextFromSelection()
         {
             string fullText = JsonPreviewBox.Text;
@@ -123,26 +184,30 @@ namespace TableLamp.Views
                 return;
             }
 
-            int selStart = JsonPreviewBox.SelectionStart;
-            var lines = fullText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
+            int caret = JsonPreviewBox.SelectionStart;
             int currentLineIndex = 0;
-            int charPos = 0;
-            for (int i = 0; i < lines.Length; i++)
+            int lineStartChar = 0;
+
+            // Count newlines exactly to prevent carriage-return drift
+            for (int i = 0; i < caret && i < fullText.Length; i++)
             {
-                int lineLen = lines[i].Length + Environment.NewLine.Length;
-                if (selStart >= charPos && selStart <= charPos + lineLen)
+                if (fullText[i] == '\n')
                 {
-                    currentLineIndex = i;
-                    break;
+                    currentLineIndex++;
+                    lineStartChar = i + 1;
                 }
-                charPos += lineLen;
             }
 
-            ContextLineNumberText.Text = $"Line {currentLineIndex + 1}";
-            string currentLine = lines[Math.Min(currentLineIndex, lines.Length - 1)].Trim();
+            var lines = fullText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            string currentLine = currentLineIndex < lines.Length ? lines[currentLineIndex] : "";
+            string trimmedCurrentLine = currentLine.Trim();
 
-            // Trace hierarchy from beginning to current line to find current subject, chapter, topic
+            // Update Active Line Indicator without selecting whole line text
+            ContextLineNumberText.Text = $"Line {currentLineIndex + 1}";
+            ActiveLineGutterText.Text = $"Line {currentLineIndex + 1}:";
+            ActiveLineContentSnippetText.Text = string.IsNullOrWhiteSpace(trimmedCurrentLine) ? "(empty line)" : trimmedCurrentLine;
+
+            // Trace hierarchy from 0 up to currentLineIndex
             string? foundSubj = null;
             string? foundCh = null;
             string? foundTop = null;
@@ -152,8 +217,8 @@ namespace TableLamp.Views
                 string line = lines[i];
                 string trimmed = line.Trim();
 
-                // Check indentation / prefix patterns
-                if (line.StartsWith("  \"") && line.Contains("\": {") && !line.Contains("\"Chapters\""))
+                // 1. Subject Header: e.g. "Subject1": { or "Robins Physiology": {
+                if (line.StartsWith("  \"") && trimmed.EndsWith(": {") && !trimmed.Contains("\"Chapters\""))
                 {
                     int quote1 = line.IndexOf('"');
                     int quote2 = line.IndexOf('"', quote1 + 1);
@@ -164,23 +229,26 @@ namespace TableLamp.Views
                         foundTop = null;
                     }
                 }
-                else if (line.Contains("\"Chapter ") && line.Contains("\": {"))
+                // 2. Chapter Header: e.g. "chapter1": { or "Chapter 1": {
+                else if ((trimmed.StartsWith("\"chapter", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("\"Chapter", StringComparison.OrdinalIgnoreCase))
+                         && trimmed.EndsWith(": {"))
                 {
-                    int quote1 = line.IndexOf("\"Chapter ");
-                    int quote2 = line.IndexOf('"', quote1 + 1);
+                    int quote1 = trimmed.IndexOf('"');
+                    int quote2 = trimmed.IndexOf('"', quote1 + 1);
                     if (quote1 >= 0 && quote2 > quote1)
                     {
-                        foundCh = line.Substring(quote1 + 1, quote2 - quote1 - 1);
+                        foundCh = trimmed.Substring(quote1 + 1, quote2 - quote1 - 1);
                         foundTop = null;
                     }
                 }
-                else if (line.Contains("\"topic_") && line.Contains("\": {"))
+                // 3. Topic Header: e.g. "topic_1": {
+                else if (trimmed.StartsWith("\"topic_", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(": {"))
                 {
-                    int quote1 = line.IndexOf("\"topic_");
-                    int quote2 = line.IndexOf('"', quote1 + 1);
+                    int quote1 = trimmed.IndexOf('"');
+                    int quote2 = trimmed.IndexOf('"', quote1 + 1);
                     if (quote1 >= 0 && quote2 > quote1)
                     {
-                        foundTop = line.Substring(quote1 + 1, quote2 - quote1 - 1);
+                        foundTop = trimmed.Substring(quote1 + 1, quote2 - quote1 - 1);
                     }
                 }
             }
@@ -189,54 +257,52 @@ namespace TableLamp.Views
             _activeChapterKey = foundCh;
             _activeTopicKey = foundTop;
 
-            // Determine if current line is Topic, Chapter, or Subject context
-            bool isTopicLine = currentLine.Contains("\"topic_") ||
-                               currentLine.StartsWith("\"start_page\"") ||
-                               currentLine.StartsWith("\"end_page\"") ||
-                               (foundTop != null && currentLine.StartsWith("\"name\""));
+            // Determine active level based on trimmedCurrentLine
+            bool isTopicLine = trimmedCurrentLine.StartsWith("\"topic_", StringComparison.OrdinalIgnoreCase) ||
+                               trimmedCurrentLine.StartsWith("\"start_page\"", StringComparison.OrdinalIgnoreCase) ||
+                               trimmedCurrentLine.StartsWith("\"end_page\"", StringComparison.OrdinalIgnoreCase) ||
+                               (foundTop != null && trimmedCurrentLine.StartsWith("\"name\"", StringComparison.OrdinalIgnoreCase));
 
             bool isChapterLine = !isTopicLine &&
-                                 (currentLine.Contains("\"Chapter ") ||
-                                  currentLine.Contains("\"Chapters\"") ||
-                                  (foundCh != null && foundTop == null && currentLine.StartsWith("\"name\"")));
+                                 (trimmedCurrentLine.StartsWith("\"chapter", StringComparison.OrdinalIgnoreCase) ||
+                                  trimmedCurrentLine.StartsWith("\"Chapter", StringComparison.OrdinalIgnoreCase) ||
+                                  trimmedCurrentLine.Contains("\"Chapters\"") ||
+                                  (foundCh != null && foundTop == null && trimmedCurrentLine.StartsWith("\"name\"", StringComparison.OrdinalIgnoreCase)));
 
             bool isSubjectLine = !isTopicLine && !isChapterLine &&
-                                 (currentLine.StartsWith("\"short_name\"") ||
-                                  currentLine.StartsWith("\"full_name\"") ||
-                                  currentLine.StartsWith("\"edition\"") ||
-                                  (foundSubj != null && currentLine.Contains($"\"{foundSubj}\"")));
+                                 (trimmedCurrentLine.StartsWith("\"short_name\"") ||
+                                  trimmedCurrentLine.StartsWith("\"full_name\"") ||
+                                  trimmedCurrentLine.StartsWith("\"edition\"") ||
+                                  (foundSubj != null && trimmedCurrentLine.Contains($"\"{foundSubj}\"")));
 
             if (isTopicLine && foundSubj != null && foundCh != null && _tree.TryGetValue(foundSubj, out var s) &&
                 s.Chapters.TryGetValue(foundCh, out var c))
             {
-                PresetTopic? topic = null;
                 string topKey = foundTop ?? c.Topics.Keys.FirstOrDefault() ?? "topic_1";
-                if (!c.Topics.TryGetValue(topKey, out topic))
-                {
-                    topic = c.Topics.Values.FirstOrDefault();
-                }
-
-                if (topic != null)
+                if (c.Topics.TryGetValue(topKey, out var topic))
                 {
                     ShowTopicPanel(foundCh, topic.Key, topic);
+                    RecordHistoryToken($"topic:{foundSubj}:{foundCh}:{topic.Key}");
                     return;
                 }
             }
 
-            if ((isChapterLine || foundCh != null) && foundSubj != null && _tree.TryGetValue(foundSubj, out var subj) &&
-                foundCh != null && subj.Chapters.TryGetValue(foundCh, out var chapter))
+            if ((isChapterLine || (foundCh != null && !isSubjectLine)) && foundSubj != null &&
+                _tree.TryGetValue(foundSubj, out var subj) && foundCh != null && subj.Chapters.TryGetValue(foundCh, out var chapter))
             {
                 ShowChapterPanel(foundSubj, chapter.Key, chapter);
+                RecordHistoryToken($"chapter:{foundSubj}:{chapter.Key}");
                 return;
             }
 
             if (_activeSubjectKey != null && _tree.TryGetValue(_activeSubjectKey, out var activeSubject))
             {
                 ShowSubjectPanel(activeSubject.Key, activeSubject);
+                RecordHistoryToken($"subject:{activeSubject.Key}");
                 return;
             }
 
-            ShowGeneralPanel("Root / Non-selection");
+            ShowGeneralPanel("Root Overview");
         }
 
         private void ShowSubjectPanel(string subjectKey, PresetSubject subject)
@@ -261,8 +327,16 @@ namespace TableLamp.Views
             TopicPanel.Visibility = Visibility.Collapsed;
             GeneralPanel.Visibility = Visibility.Collapsed;
 
-            ChapterParentSubjectBox.Text = subjectKey;
-            ChapterKeyBox.Text = chapterKey;
+            // Parent Subject is non-editable; shows short_name and navigates to subject on click
+            string parentShortName = subjectKey;
+            if (_tree.TryGetValue(subjectKey, out var s) && !string.IsNullOrWhiteSpace(s.short_name))
+            {
+                parentShortName = s.short_name;
+            }
+            ChapterParentSubjectText.Text = $"{parentShortName} (Click to navigate)";
+
+            // Chapter number as integer
+            ChapterNumberInput.Value = chapter.ChapterNumber;
             ChapterNameBox.Text = chapter.name ?? "";
         }
 
@@ -288,6 +362,191 @@ namespace TableLamp.Views
             ChapterPanel.Visibility = Visibility.Collapsed;
             TopicPanel.Visibility = Visibility.Collapsed;
             GeneralPanel.Visibility = Visibility.Visible;
+        }
+
+        #region History Navigation
+
+        private void RecordHistoryToken(string token)
+        {
+            if (_isNavigatingHistory) return;
+
+            if (_historyIndex >= 0 && _historyIndex < _navigationHistory.Count && _navigationHistory[_historyIndex] == token)
+                return;
+
+            // Truncate forward history if navigating after a fork
+            if (_historyIndex >= 0 && _historyIndex < _navigationHistory.Count - 1)
+            {
+                _navigationHistory.RemoveRange(_historyIndex + 1, _navigationHistory.Count - (_historyIndex + 1));
+            }
+
+            _navigationHistory.Add(token);
+            _historyIndex = _navigationHistory.Count - 1;
+            UpdateHistoryButtonsState();
+        }
+
+        private void OnHistoryBackClicked(object sender, RoutedEventArgs e)
+        {
+            if (_historyIndex > 0)
+            {
+                _historyIndex--;
+                NavigateToHistoryToken(_navigationHistory[_historyIndex]);
+            }
+        }
+
+        private void OnHistoryForwardClicked(object sender, RoutedEventArgs e)
+        {
+            if (_historyIndex < _navigationHistory.Count - 1)
+            {
+                _historyIndex++;
+                NavigateToHistoryToken(_navigationHistory[_historyIndex]);
+            }
+        }
+
+        private void NavigateToHistoryToken(string token)
+        {
+            _isNavigatingHistory = true;
+            try
+            {
+                var parts = token.Split(':');
+                if (parts.Length >= 2)
+                {
+                    string targetKey = parts.Last();
+                    MoveCaretToToken($"\"{targetKey}\":");
+                }
+            }
+            finally
+            {
+                _isNavigatingHistory = false;
+                UpdateHistoryButtonsState();
+            }
+        }
+
+        private void UpdateHistoryButtonsState()
+        {
+            HistoryBackButton.IsEnabled = _historyIndex > 0;
+            HistoryForwardButton.IsEnabled = _historyIndex < _navigationHistory.Count - 1;
+        }
+
+        #endregion
+
+        #region Next & Previous Element Navigation
+
+        private class NavElement
+        {
+            public string Type { get; set; } = "";
+            public string SubjectKey { get; set; } = "";
+            public string? ChapterKey { get; set; }
+            public string? TopicKey { get; set; }
+            public string SearchToken { get; set; } = "";
+        }
+
+        private List<NavElement> BuildSequentialElementList()
+        {
+            var list = new List<NavElement>();
+            foreach (var (subjKey, subj) in _tree)
+            {
+                list.Add(new NavElement
+                {
+                    Type = "Subject",
+                    SubjectKey = subjKey,
+                    SearchToken = $"\"{subjKey}\":"
+                });
+
+                if (subj.Chapters == null) continue;
+                foreach (var (chKey, ch) in subj.Chapters)
+                {
+                    list.Add(new NavElement
+                    {
+                        Type = "Chapter",
+                        SubjectKey = subjKey,
+                        ChapterKey = chKey,
+                        SearchToken = $"\"{chKey}\":"
+                    });
+
+                    if (ch.Topics == null) continue;
+                    foreach (var (topKey, top) in ch.Topics)
+                    {
+                        list.Add(new NavElement
+                        {
+                            Type = "Topic",
+                            SubjectKey = subjKey,
+                            ChapterKey = chKey,
+                            TopicKey = topKey,
+                            SearchToken = $"\"{topKey}\":"
+                        });
+                    }
+                }
+            }
+            return list;
+        }
+
+        private void OnNextElementClicked(object sender, RoutedEventArgs e)
+        {
+            var elements = BuildSequentialElementList();
+            if (elements.Count == 0) return;
+
+            int currentIndex = FindCurrentElementIndex(elements);
+            int nextIndex = currentIndex + 1;
+            if (nextIndex >= elements.Count) nextIndex = 0; // wrap around
+
+            MoveCaretToToken(elements[nextIndex].SearchToken);
+        }
+
+        private void OnPreviousElementClicked(object sender, RoutedEventArgs e)
+        {
+            var elements = BuildSequentialElementList();
+            if (elements.Count == 0) return;
+
+            int currentIndex = FindCurrentElementIndex(elements);
+            int prevIndex = currentIndex - 1;
+            if (prevIndex < 0) prevIndex = elements.Count - 1; // wrap around
+
+            MoveCaretToToken(elements[prevIndex].SearchToken);
+        }
+
+        private int FindCurrentElementIndex(List<NavElement> elements)
+        {
+            if (_activeTopicKey != null)
+            {
+                int idx = elements.FindIndex(e => e.TopicKey == _activeTopicKey);
+                if (idx >= 0) return idx;
+            }
+            if (_activeChapterKey != null)
+            {
+                int idx = elements.FindIndex(e => e.ChapterKey == _activeChapterKey && e.Type == "Chapter");
+                if (idx >= 0) return idx;
+            }
+            if (_activeSubjectKey != null)
+            {
+                int idx = elements.FindIndex(e => e.SubjectKey == _activeSubjectKey && e.Type == "Subject");
+                if (idx >= 0) return idx;
+            }
+            return 0;
+        }
+
+        private void MoveCaretToToken(string token)
+        {
+            string text = JsonPreviewBox.Text;
+            int idx = text.IndexOf(token, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                JsonPreviewBox.Focus(FocusState.Programmatic);
+                JsonPreviewBox.SelectionStart = idx;
+                JsonPreviewBox.SelectionLength = 0; // Do NOT select the whole text
+                DetectContextFromSelection();
+            }
+        }
+
+        #endregion
+
+        #region Contextual Panel Actions
+
+        private void OnChapterParentSubjectClicked(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_activeSubjectKey))
+            {
+                MoveCaretToToken($"\"{_activeSubjectKey}\":");
+            }
         }
 
         private void OnUpdateSubjectClicked(object sender, RoutedEventArgs e)
@@ -316,11 +575,11 @@ namespace TableLamp.Views
             }
 
             int nextNum = subject.Chapters.Count + 1;
-            string newChKey = $"Chapter {nextNum}";
+            string newChKey = $"chapter{nextNum}";
             while (subject.Chapters.ContainsKey(newChKey))
             {
                 nextNum++;
-                newChKey = $"Chapter {nextNum}";
+                newChKey = $"chapter{nextNum}";
             }
 
             var newChapter = new PresetChapter
@@ -328,29 +587,26 @@ namespace TableLamp.Views
                 Key = newChKey,
                 name = $"Chapter {nextNum} Name",
                 Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
-            };
-
-            // Add default first topic so the chapter is complete
-            newChapter.Topics["topic_1"] = new PresetTopic
-            {
-                Key = "topic_1",
-                name = "Overview",
-                start_page = "1",
-                end_page = "10"
+                {
+                    ["topic_1"] = new PresetTopic
+                    {
+                        Key = "topic_1",
+                        name = "Overview",
+                        start_page = "1",
+                        end_page = "10"
+                    }
+                }
             };
 
             subject.Chapters[newChKey] = newChapter;
             _activeChapterKey = newChKey;
 
-            // Move preview selection to the newly added chapter line
             RefreshJsonPreview(targetKeyToSelect: $"\"{newChKey}\"");
-
-            // Display the fields that can change its main attributes
             ShowChapterPanel(_activeSubjectKey, newChKey, newChapter);
             ChapterNameBox.Focus(FocusState.Programmatic);
             ChapterNameBox.SelectAll();
 
-            ShowStatus($"Added '{newChKey}' to '{_activeSubjectKey}'. Fields ready to edit.", InfoBarSeverity.Success);
+            ShowStatus($"Added '{newChKey}' to '{_activeSubjectKey}'.", InfoBarSeverity.Success);
         }
 
         private void OnUpdateChapterClicked(object sender, RoutedEventArgs e)
@@ -361,22 +617,24 @@ namespace TableLamp.Views
             if (string.IsNullOrEmpty(_activeChapterKey) || !subject.Chapters.TryGetValue(_activeChapterKey, out var chapter))
                 return;
 
+            int chapterNum = double.IsNaN(ChapterNumberInput.Value) ? chapter.ChapterNumber : (int)ChapterNumberInput.Value;
+            string targetKey = $"chapter{chapterNum}";
+
+            // If chapter key changed, update dictionary key
+            if (!string.Equals(_activeChapterKey, targetKey, StringComparison.OrdinalIgnoreCase))
+            {
+                subject.Chapters.Remove(_activeChapterKey);
+                chapter.Key = targetKey;
+                subject.Chapters[targetKey] = chapter;
+                _activeChapterKey = targetKey;
+            }
+
             chapter.name = ChapterNameBox.Text.Trim();
             RefreshJsonPreview(targetKeyToSelect: $"\"{_activeChapterKey}\"");
             ShowStatus($"Updated chapter '{chapter.name}'.", InfoBarSeverity.Success);
         }
 
-        private void OnAddTopicFromChapterClicked(object sender, RoutedEventArgs e)
-        {
-            AddNewTopicInternal();
-        }
-
         private void OnAddTopicClicked(object sender, RoutedEventArgs e)
-        {
-            AddNewTopicInternal();
-        }
-
-        private void AddNewTopicInternal()
         {
             if (string.IsNullOrEmpty(_activeSubjectKey) || !_tree.TryGetValue(_activeSubjectKey, out var subject))
             {
@@ -414,14 +672,11 @@ namespace TableLamp.Views
             chapter.Topics[newTopKey] = newTopic;
             _activeTopicKey = newTopKey;
 
-            // Move selection to new topic and display its editable fields
             RefreshJsonPreview(targetKeyToSelect: $"\"{newTopKey}\"");
             ShowTopicPanel(chapter.Key, newTopKey, newTopic);
-
             TopicNameBox.Focus(FocusState.Programmatic);
             TopicNameBox.SelectAll();
 
-            // The "Add Topic" button is retained in TopicPanel!
             ShowStatus($"Added '{newTopKey}' to '{chapter.Key}'. 'Add Topic' button retained.", InfoBarSeverity.Success);
         }
 
@@ -447,7 +702,7 @@ namespace TableLamp.Views
         private void OnAddSubjectClicked(object sender, RoutedEventArgs e)
         {
             int num = _tree.Count + 1;
-            string newKey = $"Subject {num}";
+            string newKey = $"Subject{num}";
             var newSubject = new PresetSubject
             {
                 Key = newKey,
@@ -455,15 +710,16 @@ namespace TableLamp.Views
                 full_name = $"Full Subject {num} Name",
                 edition = "1st",
                 Chapters = new Dictionary<string, PresetChapter>(StringComparer.OrdinalIgnoreCase)
-            };
-
-            newSubject.Chapters["Chapter 1"] = new PresetChapter
-            {
-                Key = "Chapter 1",
-                name = "Introduction",
-                Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["topic_1"] = new PresetTopic { Key = "topic_1", name = "Overview", start_page = "1", end_page = "10" }
+                    ["chapter1"] = new PresetChapter
+                    {
+                        Key = "chapter1",
+                        name = "Introduction",
+                        Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["topic_1"] = new PresetTopic { Key = "topic_1", name = "Overview", start_page = "1", end_page = "10" }
+                        }
+                    }
                 }
             };
 
@@ -489,61 +745,334 @@ namespace TableLamp.Views
                 {
                     JsonPreviewBox.Focus(FocusState.Programmatic);
                     JsonPreviewBox.SelectionStart = index;
-                    JsonPreviewBox.SelectionLength = targetKeyToSelect.Length;
+                    JsonPreviewBox.SelectionLength = 0; // Do NOT select the whole text
+                    DetectContextFromSelection();
                 }
             }
         }
 
-        private void OnSaveToDatabaseClicked(object sender, RoutedEventArgs e)
+        #endregion
+
+        #region File & Workspace Actions
+
+        private void OnStartFromScratchClicked(object sender, RoutedEventArgs e)
+        {
+            _tree.Clear();
+            var dummySubj = new PresetSubject
+            {
+                Key = "Subject1",
+                short_name = "Dummy Subject",
+                full_name = "Dummy Subject Book",
+                edition = "1st",
+                Chapters = new Dictionary<string, PresetChapter>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["chapter1"] = new PresetChapter
+                    {
+                        Key = "chapter1",
+                        name = "Dummy Chapter 1",
+                        Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["topic_1"] = new PresetTopic
+                            {
+                                Key = "topic_1",
+                                name = "Dummy Topic 1",
+                                start_page = "1",
+                                end_page = "10"
+                            }
+                        }
+                    }
+                }
+            };
+
+            _tree["Subject1"] = dummySubj;
+            _activeSubjectKey = "Subject1";
+            _activeChapterKey = "chapter1";
+            _activeTopicKey = "topic_1";
+            _activeFilePath = null;
+            ActiveFileBadgeText.Text = "(Scratch Preset)";
+
+            string json = _generator.GenerateJson(_tree);
+            SetJsonText(json);
+            MoveCaretToToken("\"Subject1\":");
+            ShowStatus("Started afresh with dummy subject, chapter, and topic.", InfoBarSeverity.Success);
+        }
+
+        private async void OnOpenJsonFileClicked(object sender, RoutedEventArgs e)
         {
             try
             {
-                PresetTagDatabase.Instance.SaveTree(_tree);
-                ShowStatus("Presets successfully saved and applied to PresetTagDatabase!", InfoBarSeverity.Success);
+                var picker = new Windows.Storage.Pickers.FileOpenPicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeFilter.Add(".json");
+
+                IntPtr hwnd = WindowNative.GetWindowHandle(this);
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var file = await picker.PickSingleFileAsync();
+                if (file != null)
+                {
+                    LoadJsonFile(file.Path);
+                }
+            }
+            catch (Exception)
+            {
+                // Fallback manual input
+                await ShowManualPathDialog("Open JSON File", false, path => LoadJsonFile(path));
+            }
+        }
+
+        private void LoadJsonFile(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                ShowStatus($"File not found: {filePath}", InfoBarSeverity.Error);
+                return;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(filePath);
+                _tree = _generator.Parse(json);
+                _activeFilePath = filePath;
+                ActiveFileBadgeText.Text = Path.GetFileName(filePath);
+                SetJsonText(json);
+                DetectContextFromSelection();
+                ShowStatus($"Loaded JSON file: {Path.GetFileName(filePath)}", InfoBarSeverity.Success);
             }
             catch (Exception ex)
             {
-                ShowStatus($"Failed to save: {ex.Message}", InfoBarSeverity.Error);
+                ShowStatus($"Failed to load file: {ex.Message}", InfoBarSeverity.Error);
             }
         }
 
-        private void OnLoadStarterClicked(object sender, RoutedEventArgs e)
+        private async void OnSaveJsonClicked(object sender, RoutedEventArgs e)
         {
-            string starterJson = _generator.CreateStarterPresetJson();
-            _tree = _generator.Parse(starterJson);
-            SetJsonText(starterJson);
-            DetectContextFromSelection();
-            ShowStatus("Canonical starter presets loaded.", InfoBarSeverity.Success);
+            if (!string.IsNullOrEmpty(_activeFilePath))
+            {
+                try
+                {
+                    string json = _generator.GenerateJson(_tree);
+                    File.WriteAllText(_activeFilePath, json);
+                    ShowStatus($"Saved JSON to: {Path.GetFileName(_activeFilePath)}", InfoBarSeverity.Success);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    ShowStatus($"Save error: {ex.Message}", InfoBarSeverity.Error);
+                }
+            }
+
+            // If no active file, prompt where to save
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileSavePicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeChoices.Add("JSON File", new List<string>() { ".json" });
+                picker.SuggestedFileName = "presets.json";
+
+                IntPtr hwnd = WindowNative.GetWindowHandle(this);
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var file = await picker.PickSaveFileAsync();
+                if (file != null)
+                {
+                    _activeFilePath = file.Path;
+                    ActiveFileBadgeText.Text = Path.GetFileName(file.Path);
+                    string json = _generator.GenerateJson(_tree);
+                    File.WriteAllText(_activeFilePath, json);
+                    ShowStatus($"Saved JSON to: {_activeFilePath}", InfoBarSeverity.Success);
+                    RefreshWorkspaceFiles();
+                }
+            }
+            catch (Exception)
+            {
+                await ShowManualPathDialog("Save JSON File", false, path =>
+                {
+                    _activeFilePath = path;
+                    File.WriteAllText(path, _generator.GenerateJson(_tree));
+                    ActiveFileBadgeText.Text = Path.GetFileName(path);
+                    ShowStatus($"Saved JSON to: {path}", InfoBarSeverity.Success);
+                });
+            }
         }
 
-        private void OnCopyJsonClicked(object sender, RoutedEventArgs e)
+        private async void OnNewWorkspaceClicked(object sender, RoutedEventArgs e)
+        {
+            await PromptForDirectoryAndOpenWorkspace("Create / Select New Workspace Directory");
+        }
+
+        private async void OnOpenWorkspaceClicked(object sender, RoutedEventArgs e)
+        {
+            await PromptForDirectoryAndOpenWorkspace("Open Workspace Directory");
+        }
+
+        private async System.Threading.Tasks.Task PromptForDirectoryAndOpenWorkspace(string title)
         {
             try
             {
-                var package = new DataPackage();
-                package.SetText(JsonPreviewBox.Text);
-                Clipboard.SetContent(package);
-                ShowStatus("Presets JSON copied to clipboard.", InfoBarSeverity.Success);
+                var picker = new Windows.Storage.Pickers.FolderPicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeFilter.Add("*");
+
+                IntPtr hwnd = WindowNative.GetWindowHandle(this);
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var folder = await picker.PickSingleFolderAsync();
+                if (folder != null)
+                {
+                    OpenWorkspace(folder.Path);
+                }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                ShowStatus($"Copy failed: {ex.Message}", InfoBarSeverity.Warning);
+                await ShowManualPathDialog(title, true, dir => OpenWorkspace(dir));
             }
         }
 
-        private void OnExportJsonClicked(object sender, RoutedEventArgs e)
+        private void OpenWorkspace(string directoryPath)
         {
-            try
+            if (!Directory.Exists(directoryPath))
             {
-                string localFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string exportPath = Path.Combine(localFolder, "TableLamp", "presets_export.json");
-                Directory.CreateDirectory(Path.GetDirectoryName(exportPath)!);
-                File.WriteAllText(exportPath, JsonPreviewBox.Text);
-                ShowStatus($"Exported presets file to: {exportPath}", InfoBarSeverity.Success);
+                Directory.CreateDirectory(directoryPath);
             }
-            catch (Exception ex)
+
+            _activeWorkspaceDir = directoryPath;
+            WorkspacePathText.Text = directoryPath;
+            WorkspaceCard.Visibility = Visibility.Visible;
+            RefreshWorkspaceFiles();
+            ShowStatus($"Workspace opened: {directoryPath}", InfoBarSeverity.Success);
+        }
+
+        private void CloseWorkspace()
+        {
+            _activeWorkspaceDir = null;
+            WorkspaceCard.Visibility = Visibility.Collapsed;
+        }
+
+        private void RefreshWorkspaceFiles()
+        {
+            if (string.IsNullOrEmpty(_activeWorkspaceDir) || !Directory.Exists(_activeWorkspaceDir))
+                return;
+
+            var files = Directory.GetFiles(_activeWorkspaceDir, "*.json")
+                                 .Select(Path.GetFileName)
+                                 .ToList();
+
+            WorkspaceFilesListView.ItemsSource = files;
+        }
+
+        private void OnWorkspaceFileClicked(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is string filename && !string.IsNullOrEmpty(_activeWorkspaceDir))
             {
-                ShowStatus($"Export failed: {ex.Message}", InfoBarSeverity.Error);
+                string fullPath = Path.Combine(_activeWorkspaceDir, filename);
+                LoadJsonFile(fullPath);
+            }
+        }
+
+        private async void OnNewJsonFileClicked(object sender, RoutedEventArgs e)
+        {
+            var textBox = new TextBox { PlaceholderText = "chapter_topics.json", Width = 300 };
+            var dialog = new ContentDialog
+            {
+                Title = "New JSON File",
+                Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = "Enter file name:" },
+                        textBox
+                    }
+                },
+                PrimaryButtonText = "Create",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                string name = textBox.Text.Trim();
+                if (string.IsNullOrEmpty(name)) name = "new_presets.json";
+                if (!name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) name += ".json";
+
+                string targetDir = _activeWorkspaceDir ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string fullPath = Path.Combine(targetDir, name);
+
+                string starter = _generator.CreateStarterPresetJson();
+                File.WriteAllText(fullPath, starter);
+                RefreshWorkspaceFiles();
+                LoadJsonFile(fullPath);
+            }
+        }
+
+        private async void OnNewFolderClicked(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_activeWorkspaceDir)) return;
+
+            var textBox = new TextBox { PlaceholderText = "SubFolder", Width = 300 };
+            var dialog = new ContentDialog
+            {
+                Title = "New Folder",
+                Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = "Enter folder name:" },
+                        textBox
+                    }
+                },
+                PrimaryButtonText = "Create",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                string name = textBox.Text.Trim();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    string path = Path.Combine(_activeWorkspaceDir, name);
+                    Directory.CreateDirectory(path);
+                    RefreshWorkspaceFiles();
+                    ShowStatus($"Created folder: {name}", InfoBarSeverity.Success);
+                }
+            }
+        }
+
+        private async System.Threading.Tasks.Task ShowManualPathDialog(string title, bool isFolder, Action<string> onConfirmed)
+        {
+            var textBox = new TextBox
+            {
+                PlaceholderText = isFolder ? @"C:\PresetsWorkspace" : @"C:\Presets\file.json",
+                Width = 400
+            };
+
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = isFolder ? "Enter directory path:" : "Enter full file path:" },
+                        textBox
+                    }
+                },
+                PrimaryButtonText = "OK",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                string path = textBox.Text.Trim();
+                if (!string.IsNullOrEmpty(path))
+                {
+                    onConfirmed(path);
+                }
             }
         }
 
@@ -553,5 +1082,7 @@ namespace TableLamp.Views
             StatusInfoBar.Severity = severity;
             StatusInfoBar.IsOpen = true;
         }
+
+        #endregion
     }
 }

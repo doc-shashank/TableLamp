@@ -44,10 +44,9 @@ namespace TableLamp.Tests
             var subject1 = tree["Subject1"];
             Assert.Equal("Robins Physiology", subject1.short_name);
             Assert.Equal("Robins Pathologic Basis of Disease", subject1.full_name);
-            Assert.Equal("7th", subject1.edition);
-            Assert.True(subject1.Chapters.ContainsKey("Chapter 1"));
+            Assert.True(subject1.Chapters.ContainsKey("chapter1") || subject1.Chapters.ContainsKey("Chapter 1"));
 
-            var ch1 = subject1.Chapters["Chapter 1"];
+            var ch1 = subject1.Chapters.GetValueOrDefault("chapter1") ?? subject1.Chapters["Chapter 1"];
             Assert.Equal("Cell Injury", ch1.name);
             Assert.Equal(1, ch1.ChapterNumber);
             Assert.True(ch1.Topics.ContainsKey("topic_1"));

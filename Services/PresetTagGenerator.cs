@@ -141,8 +141,9 @@ namespace TableLamp.Services
                     edition = "7th",
                     Chapters = new Dictionary<string, PresetChapter>(StringComparer.OrdinalIgnoreCase)
                     {
-                        ["Chapter 1"] = new PresetChapter
+                        ["chapter1"] = new PresetChapter
                         {
+                            Key = "chapter1",
                             name = "Cell Injury",
                             Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
                             {
@@ -160,8 +161,9 @@ namespace TableLamp.Services
                                 }
                             }
                         },
-                        ["Chapter 2"] = new PresetChapter
+                        ["chapter2"] = new PresetChapter
                         {
+                            Key = "chapter2",
                             name = "Inflammation and Repair",
                             Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
                             {
@@ -182,8 +184,9 @@ namespace TableLamp.Services
                     edition = "14th",
                     Chapters = new Dictionary<string, PresetChapter>(StringComparer.OrdinalIgnoreCase)
                     {
-                        ["Chapter 9"] = new PresetChapter
+                        ["chapter9"] = new PresetChapter
                         {
+                            Key = "chapter9",
                             name = "Cardiac Muscle; The Heart as a Pump",
                             Topics = new Dictionary<string, PresetTopic>(StringComparer.OrdinalIgnoreCase)
                             {

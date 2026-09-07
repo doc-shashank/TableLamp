@@ -21,15 +21,12 @@
                 Padding="24,12,24,12">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <!-- Left: Launcher return + Branding -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <Button x:Name="ReturnToLauncherButton"
                             ToolTipService.ToolTip="Return to Launcher"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Padding="10,6">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE72B;" FontSize="13" />
-                            <TextBlock Text="Launcher" FontSize="13" FontWeight="SemiBold" />
-                        </StackPanel>
+                        <FontIcon Glyph="&#xE72B;" FontSize="14" />
                     </Button>
                     <Rectangle Width="1" Height="20" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="2,0" />
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -42,33 +39,40 @@
                                 Padding="6,2" 
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                                 BorderThickness="1">
-                            <TextBlock Text="v0.0.3" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="v0.0.5" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Border>
+                        <Border Background="{ThemeResource AccentFillColorDefaultBrush}" 
+                                CornerRadius="4" 
+                                Padding="6,2">
+                            <TextBlock Text="Basic" FontSize="11" FontWeight="SemiBold" Foreground="White" />
                         </Border>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Center: Navigation Elements (Dashboard & Calendar Buttons) -->
+                <!-- Center: Navigation Elements (Icon-Only Buttons) -->
                 <StackPanel Grid.Column="1" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <!-- Dashboard Navigation Element -->
                     <Button x:Name="DashboardNavButton"
-                            ToolTipService.ToolTip="Go to Dashboard"
+                            ToolTipService.ToolTip="Dashboard"
                             Style="{ThemeResource DefaultButtonStyle}"
-                            Padding="16,8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE80F;" FontSize="14" />
-                            <TextBlock Text="Dashboard" FontWeight="SemiBold" FontSize="13" />
-                        </StackPanel>
+                            Padding="12,8">
+                        <FontIcon Glyph="&#xE80F;" FontSize="15" />
                     </Button>
 
                     <!-- Calendar Navigation Element -->
                     <Button x:Name="CalendarNavButton"
-                            ToolTipService.ToolTip="View Study Calendar"
+                            ToolTipService.ToolTip="Study Calendar"
                             Style="{ThemeResource SubtleButtonStyle}"
-                            Padding="16,8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE787;" FontSize="14" />
-                            <TextBlock Text="Calendar" FontWeight="SemiBold" FontSize="13" />
-                        </StackPanel>
+                            Padding="12,8">
+                        <FontIcon Glyph="&#xE787;" FontSize="15" />
+                    </Button>
+
+                    <!-- Settings Navigation Element -->
+                    <Button x:Name="SettingsNavButton"
+                            ToolTipService.ToolTip="Settings &amp; Preset Database"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="12,8">
+                        <FontIcon Glyph="&#xE713;" FontSize="15" />
                     </Button>
                 </StackPanel>
 
