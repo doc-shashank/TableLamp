@@ -1,0 +1,143 @@
+<Page
+    x:Class="TableLamp.Views.SessionListsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:TableLamp.Models"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                Padding="32,16,32,16">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button x:Name="BackButton"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="8,6"
+                            ToolTipService.ToolTip="Back to Dashboard">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                            <TextBlock Text="Dashboard" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Height="20" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="4,0" />
+                    <TextBlock Text="Review Sessions" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button x:Name="CreateNewSessionButton"
+                        Grid.Column="2"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Padding="16,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="Create New Session" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Sessions List -->
+        <ScrollViewer Grid.Row="1" Padding="32,24,32,48">
+            <StackPanel MaxWidth="840" HorizontalAlignment="Center" Spacing="16">
+                <!-- Search Box -->
+                <TextBox x:Name="SearchBox"
+                         PlaceholderText="Search sessions by subject or chapter..."
+                         Margin="0,0,0,8" />
+
+                <!-- Empty State -->
+                <Border x:Name="EmptyStateBorder"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="40"
+                        Visibility="Collapsed">
+                    <StackPanel Spacing="12" HorizontalAlignment="Center">
+                        <FontIcon Glyph="&#xE8F1;" FontSize="44" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="No Sessions Available" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock Text="Create a new study session to begin reviewing questions."
+                                   FontSize="13"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Sessions ItemsControl -->
+                <ItemsControl x:Name="SessionsItemsControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,12"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="20,16"
+                                    Tapped="OnSessionCardTapped"
+                                    Tag="{Binding}">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <!-- Session Icon -->
+                                    <Border Grid.Column="0"
+                                            Width="44"
+                                            Height="44"
+                                            CornerRadius="10"
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            Margin="0,0,16,0"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8F1;" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <!-- Session Info -->
+                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayTitle}"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Text="{Binding FormattedDate}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                    CornerRadius="4"
+                                                    Padding="6,2">
+                                                <TextBlock Text="{Binding QuestionCount}"
+                                                           FontSize="11"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </Border>
+                                            <TextBlock Text="questions" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Action: View & Delete -->
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <Button ToolTipService.ToolTip="Review this Session"
+                                                Style="{ThemeResource AccentButtonStyle}"
+                                                Padding="14,8"
+                                                Click="OnReviewSessionClicked"
+                                                Tag="{Binding}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE768;" FontSize="12" />
+                                                <TextBlock Text="Start" FontSize="13" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button ToolTipService.ToolTip="Delete Session"
+                                                Style="{ThemeResource SubtleButtonStyle}"
+                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                Padding="8"
+                                                Click="OnDeleteSessionClicked"
+                                                Tag="{Binding}">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

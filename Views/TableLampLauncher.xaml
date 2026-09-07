@@ -1,0 +1,160 @@
+<Window
+    x:Class="TableLamp.Views.TableLampLauncher"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Table Lamp">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <!-- Subtle Ambient Glow -->
+        <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border.Background>
+                <RadialGradientBrush Center="0.5,0.2" RadiusX="0.8" RadiusY="0.8">
+                    <GradientStop Color="#220078D7" Offset="0" />
+                    <GradientStop Color="#00000000" Offset="1" />
+                </RadialGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid RowDefinitions="Auto,*,Auto" Margin="36,36,36,28" VerticalAlignment="Stretch">
+            <!-- Launcher Header -->
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Spacing="8">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                    <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <FontIcon Glyph="&#xE781;" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="Table Lamp" FontSize="28" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
+                            CornerRadius="6" 
+                            Padding="8,3" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="v0.0.2" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Select a mode to launch your study workspace"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- Three Card Containers Placed Horizontally -->
+            <Grid Grid.Row="1"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  ColumnSpacing="20"
+                  Margin="0,20,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Card Container 1: Basic (Interactive Button) -->
+                <Border x:Name="BasicCard"
+                        Grid.Column="0"
+                        Height="190"
+                        CornerRadius="16"
+                        BorderThickness="1.5"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Padding="16"
+                        IsHitTestVisible="True">
+                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <Border Grid.Row="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="64"
+                                Height="64"
+                                CornerRadius="32"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE735;" FontSize="28" Foreground="White" />
+                        </Border>
+                        <TextBlock x:Name="BasicText"
+                                   Grid.Row="1"
+                                   Text="Basic"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,8,0,4" />
+                    </Grid>
+                </Border>
+
+                <!-- Card Container 2: Advanced (Not Interactable for now) -->
+                <Border x:Name="AdvancedCard"
+                        Grid.Column="1"
+                        Height="190"
+                        CornerRadius="16"
+                        BorderThickness="1"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Opacity="0.5"
+                        Padding="16"
+                        IsHitTestVisible="True">
+                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <Border Grid.Row="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="64"
+                                Height="64"
+                                CornerRadius="32"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE734;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                        </Border>
+                        <TextBlock x:Name="AdvancedText"
+                                   Grid.Row="1"
+                                   Text="Advanced"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Margin="0,8,0,4" />
+                    </Grid>
+                </Border>
+
+                <!-- Card Container 3: Generator (Not Interactable for now) -->
+                <Border x:Name="GeneratorCard"
+                        Grid.Column="2"
+                        Height="190"
+                        CornerRadius="16"
+                        BorderThickness="1"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Opacity="0.5"
+                        Padding="16"
+                        IsHitTestVisible="True">
+                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <Border Grid.Row="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="64"
+                                Height="64"
+                                CornerRadius="32"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE945;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                        </Border>
+                        <TextBlock x:Name="GeneratorText"
+                                   Grid.Row="1"
+                                   Text="Generator"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Margin="0,8,0,4" />
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Launcher Footer -->
+            <StackPanel Grid.Row="2" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="Table Lamp" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                <TextBlock Text="Desktop WinUI 3 Edition" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

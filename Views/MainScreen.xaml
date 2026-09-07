@@ -1,0 +1,90 @@
+<Window
+    x:Class="TableLamp.Views.MainScreen"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Table Lamp">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Top Navigation Bar in MainWindow / MainScreen -->
+        <Border Grid.Row="0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                Padding="24,12,24,12">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Left: Launcher return + Branding -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                    <Button x:Name="ReturnToLauncherButton"
+                            ToolTipService.ToolTip="Return to Launcher"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="10,6">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72B;" FontSize="13" />
+                            <TextBlock Text="Launcher" FontSize="13" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Height="20" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="2,0" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Border Width="28" Height="28" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE781;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Table Lamp" FontSize="17" FontWeight="Bold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
+                                CornerRadius="4" 
+                                Padding="6,2" 
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1">
+                            <TextBlock Text="v0.0.2" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Center: Navigation Elements (Dashboard & Calendar Buttons) -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                    <!-- Dashboard Navigation Element -->
+                    <Button x:Name="DashboardNavButton"
+                            ToolTipService.ToolTip="Go to Dashboard"
+                            Style="{ThemeResource DefaultButtonStyle}"
+                            Padding="16,8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE80F;" FontSize="14" />
+                            <TextBlock Text="Dashboard" FontWeight="SemiBold" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Calendar Navigation Element -->
+                    <Button x:Name="CalendarNavButton"
+                            ToolTipService.ToolTip="View Study Calendar"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="16,8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE787;" FontSize="14" />
+                            <TextBlock Text="Calendar" FontWeight="SemiBold" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: Theme Switcher -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button x:Name="ThemeToggleButton"
+                            ToolTipService.ToolTip="Toggle Theme"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="8,6">
+                        <FontIcon Glyph="&#xE706;" FontSize="14" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Inner Content Frame for Pages -->
+        <Frame x:Name="RootFrame" Grid.Row="1" />
+    </Grid>
+</Window>

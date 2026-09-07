@@ -1,0 +1,144 @@
+<Page
+    x:Class="TableLamp.Views.CalendarPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:TableLamp.Models"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header Bar -->
+        <Border Grid.Row="0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                Padding="32,16,32,16">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Study Calendar" FontSize="22" FontWeight="Bold" />
+                <TextBlock Text="Track and review your study sessions completed day-by-day."
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Two Column Layout: Calendar on Left, Sessions List on Right -->
+        <Grid Grid.Row="1" Margin="32,24,32,32" ColumnSpacing="24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Calendar Card -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="20"
+                    VerticalAlignment="Top">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE787;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock Text="Select Date" FontSize="16" FontWeight="SemiBold" />
+                    </StackPanel>
+
+                    <CalendarView x:Name="SessionsCalendarView"
+                                  SelectionMode="Single"
+                                  HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Sessions on Selected Day Card -->
+            <Border Grid.Column="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="24"
+                    VerticalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Day Header -->
+                    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+                        <TextBlock x:Name="SelectedDateHeaderText"
+                                   Text="Sessions for Today"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+                        <TextBlock x:Name="SelectedDateSubtext"
+                                   Text="Showing recorded study sessions"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+
+                    <!-- Sessions List or Empty State -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="12">
+                            <!-- Empty State -->
+                            <Border x:Name="EmptyDayBorder"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    CornerRadius="10"
+                                    Padding="32"
+                                    Visibility="Collapsed">
+                                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE787;" FontSize="32" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="No Sessions on this Day" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                    <TextBlock Text="Pick another date or start a new session from the Dashboard."
+                                               FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Day Sessions ItemsControl -->
+                            <ItemsControl x:Name="DaySessionsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10"
+                                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="10"
+                                                Padding="16,12"
+                                                Tapped="OnSessionCardTapped"
+                                                Tag="{Binding}">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Border Grid.Column="0"
+                                                        Width="38"
+                                                        Height="38"
+                                                        CornerRadius="8"
+                                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                        Margin="0,0,14,0"
+                                                        VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE768;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="15" FontWeight="SemiBold" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{Binding FormattedTime}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock Text="{Binding QuestionCount}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock Text="questions" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="2"
+                                                        Content="Open"
+                                                        Style="{ThemeResource SubtleButtonStyle}"
+                                                        Padding="12,6"
+                                                        Click="OnOpenSessionClicked"
+                                                        Tag="{Binding}"
+                                                        VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

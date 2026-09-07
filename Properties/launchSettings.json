@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TableLamp (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "TableLamp (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

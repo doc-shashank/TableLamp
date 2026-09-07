@@ -1,0 +1,197 @@
+using System;
+using System.IO;
+using System.Linq;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Navigation;
+using TableLamp.Models;
+using TableLamp.Services;
+
+namespace TableLamp.Views
+{
+    public sealed partial class ViewCanvasPage : Page
+    {
+        private BasicSessionBundle? _session;
+        private int _currentIndex;
+
+        public ViewCanvasPage()
+        {
+            this.InitializeComponent();
+
+            BackButton.Click += (s, e) => Frame.Navigate(typeof(SessionListsPage));
+            PreviousQuestionButton.Click += OnPreviousQuestionClicked;
+            NextQuestionButton.Click += OnNextQuestionClicked;
+            TextRadioButton.Checked += (s, e) => OnViewModeChanged("Text");
+            ImageRadioButton.Checked += (s, e) => OnViewModeChanged("Image");
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            if (e.Parameter is BasicSessionBundle session)
+            {
+                _session = session;
+            }
+            else if (e.Parameter is string sessionId)
+            {
+                _session = SessionService.Instance.GetSessionById(sessionId);
+            }
+
+            _currentIndex = 0;
+            PopulateSessionDetails();
+            DisplayCurrentQuestion();
+        }
+
+        private void PopulateSessionDetails()
+        {
+            if (_session == null) return;
+
+            PageHeaderTitle.Text = _session.DisplayTitle;
+
+            var tag = _session.Tag;
+            if (tag != null)
+            {
+                ExpanderSubjectText.Text = tag.subject_name ?? "General";
+                ExpanderChapterText.Text = $"Ch. {tag.chapter_number} - {tag.chapter_name}";
+                ExpanderTopicText.Text = string.IsNullOrWhiteSpace(tag.topic_name) ? "Not Specified" : tag.topic_name;
+            }
+            else
+            {
+                ExpanderSubjectText.Text = "General";
+                ExpanderChapterText.Text = "No Chapter Specified";
+                ExpanderTopicText.Text = "Not Specified";
+            }
+        }
+
+        private void DisplayCurrentQuestion()
+        {
+            int total = _session?.questions.Count ?? 0;
+            if (total == 0)
+            {
+                ProgressIndicatorText.Text = "0 of 0";
+                QuestionDisplayTextBlock.Text = "This session has no questions yet.";
+                TextContainer.Visibility = Visibility.Visible;
+                ImageContainer.Visibility = Visibility.Collapsed;
+                ViewTogglePanel.Visibility = Visibility.Collapsed;
+                PreviousQuestionButton.IsEnabled = false;
+                NextQuestionButton.IsEnabled = false;
+                return;
+            }
+
+            if (_currentIndex < 0) _currentIndex = 0;
+            if (_currentIndex >= total) _currentIndex = total - 1;
+
+            ProgressIndicatorText.Text = $"Question {_currentIndex + 1} of {total}";
+            PreviousQuestionButton.IsEnabled = _currentIndex > 0;
+            NextQuestionButton.IsEnabled = _currentIndex < total - 1;
+
+            var question = _session!.questions[_currentIndex] as SimpleQuestion;
+            if (question == null)
+            {
+                var baseQ = _session.questions[_currentIndex];
+                string baseText = baseQ.question_element_array?.FirstOrDefault()?.simple_text ?? "Question";
+                QuestionDisplayTextBlock.Text = baseText;
+                TextContainer.Visibility = Visibility.Visible;
+                ImageContainer.Visibility = Visibility.Collapsed;
+                ViewTogglePanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            bool hasText = question.HasText;
+            bool hasImage = question.HasImage;
+
+            if (hasText && hasImage)
+            {
+                ViewTogglePanel.Visibility = Visibility.Visible;
+                string currentMode = ImageRadioButton.IsChecked == true ? "Image" : "Text";
+                UpdateViewMode(currentMode, question);
+            }
+            else if (hasImage)
+            {
+                ViewTogglePanel.Visibility = Visibility.Collapsed;
+                ImageRadioButton.IsChecked = true;
+                UpdateViewMode("Image", question);
+            }
+            else
+            {
+                ViewTogglePanel.Visibility = Visibility.Collapsed;
+                TextRadioButton.IsChecked = true;
+                UpdateViewMode("Text", question);
+            }
+        }
+
+        private void UpdateViewMode(string mode, SimpleQuestion question)
+        {
+            if (mode == "Image" && question.HasImage)
+            {
+                string? imagePath = question.ImageElement?.simple_image?.ToString();
+                if (!string.IsNullOrEmpty(imagePath))
+                {
+                    try
+                    {
+                        BitmapImage bitmap;
+                        if (Uri.TryCreate(imagePath, UriKind.Absolute, out var uri))
+                        {
+                            bitmap = new BitmapImage(uri);
+                        }
+                        else if (File.Exists(imagePath))
+                        {
+                            bitmap = new BitmapImage(new Uri(imagePath));
+                        }
+                        else
+                        {
+                            bitmap = new BitmapImage(new Uri($"file:///{imagePath.Replace('\\', '/')}"));
+                        }
+
+                        QuestionDisplayImage.Source = bitmap;
+                        ImageContainer.Visibility = Visibility.Visible;
+                        TextContainer.Visibility = Visibility.Collapsed;
+                        return;
+                    }
+                    catch (Exception)
+                    {
+                        // Fallback to text if image fails to load
+                    }
+                }
+            }
+
+            // Fallback to Text presentation
+            string text = question.TextElement?.simple_text ?? question.TextElement?.formatted_text ?? "[Image Question]";
+            QuestionDisplayTextBlock.Text = text;
+            TextContainer.Visibility = Visibility.Visible;
+            ImageContainer.Visibility = Visibility.Collapsed;
+        }
+
+        private void OnViewModeChanged(string mode)
+        {
+            if (_session != null && _currentIndex < _session.questions.Count)
+            {
+                var question = _session.questions[_currentIndex] as SimpleQuestion;
+                if (question != null)
+                {
+                    UpdateViewMode(mode, question);
+                }
+            }
+        }
+
+        private void OnPreviousQuestionClicked(object sender, RoutedEventArgs e)
+        {
+            if (_currentIndex > 0)
+            {
+                _currentIndex--;
+                DisplayCurrentQuestion();
+            }
+        }
+
+        private void OnNextQuestionClicked(object sender, RoutedEventArgs e)
+        {
+            if (_session != null && _currentIndex < _session.questions.Count - 1)
+            {
+                _currentIndex++;
+                DisplayCurrentQuestion();
+            }
+        }
+    }
+}

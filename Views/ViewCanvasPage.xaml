@@ -1,0 +1,145 @@
+<Page
+    x:Class="TableLamp.Views.ViewCanvasPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Top Navigation Bar -->
+        <Border Grid.Row="0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                Padding="24,12,24,12">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button x:Name="BackButton"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Padding="10,6"
+                        Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                        <TextBlock Text="Back to Sessions" FontSize="13" />
+                    </StackPanel>
+                </Button>
+
+                <TextBlock x:Name="PageHeaderTitle"
+                           Grid.Column="1"
+                           Text="Review Session"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+
+                <Border Grid.Column="2"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        CornerRadius="6"
+                        Padding="10,4"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <TextBlock x:Name="ProgressIndicatorText" Text="Question 1 of 1" FontSize="12" FontWeight="SemiBold" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Expandable Section for Subject, Chapter Number, Chapter Name -->
+        <Border Grid.Row="1" Padding="32,12,32,0">
+            <Expander x:Name="MetadataExpander"
+                      HorizontalAlignment="Stretch"
+                      IsExpanded="False">
+                <Expander.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE8EC;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock Text="Session Information (Subject, Chapter &amp; Topic)" FontSize="13" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Expander.Header>
+                <Expander.Content>
+                    <Grid ColumnDefinitions="*,*,*" Margin="8,8,8,8">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Subject" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="ExpanderSubjectText" Text="Physics" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="Chapter" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="ExpanderChapterText" Text="Ch. 1 - Mechanics" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="Topic" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="ExpanderTopicText" Text="General" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Grid>
+                </Expander.Content>
+            </Expander>
+        </Border>
+
+        <!-- Centralized Card Container & Controls -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="800" HorizontalAlignment="Center" Spacing="20" Margin="32,24,32,40">
+                <!-- Centralized Card Container -->
+                <Border x:Name="QuestionCardBorder"
+                        Height="360"
+                        CornerRadius="16"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        Padding="32">
+                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <!-- Text Presentation Slot -->
+                        <ScrollViewer x:Name="TextContainer" VerticalScrollBarVisibility="Auto">
+                            <TextBlock x:Name="QuestionDisplayTextBlock"
+                                       FontSize="22"
+                                       FontWeight="Medium"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       LineHeight="34" />
+                        </ScrollViewer>
+
+                        <!-- Image Presentation Slot -->
+                        <Border x:Name="ImageContainer"
+                                Visibility="Collapsed"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Image x:Name="QuestionDisplayImage"
+                                   MaxHeight="300"
+                                   Stretch="Uniform" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Toggle between Text and Image (below card container) -->
+                <StackPanel x:Name="ViewTogglePanel"
+                            HorizontalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="12"
+                            Visibility="Collapsed">
+                    <TextBlock Text="View Mode:" VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <RadioButton x:Name="TextRadioButton" Content="Question Text" IsChecked="True" GroupName="ViewModeGroup" />
+                        <RadioButton x:Name="ImageRadioButton" Content="Question Image" GroupName="ViewModeGroup" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Navigation Controls: Previous / Next Question -->
+                <Grid ColumnDefinitions="*,Auto,*" Margin="0,8,0,0">
+                    <Button x:Name="PreviousQuestionButton"
+                            Content="Previous Question"
+                            Style="{ThemeResource DefaultButtonStyle}"
+                            Padding="20,10"
+                            Grid.Column="0"
+                            HorizontalAlignment="Left" />
+
+                    <Button x:Name="NextQuestionButton"
+                            Content="Next Question"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Padding="24,10"
+                            Grid.Column="2"
+                            HorizontalAlignment="Right" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
