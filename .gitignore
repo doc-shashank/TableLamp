@@ -52,3 +52,7 @@ _ReSharper*/
 # Generated files
 Generated\ Files/
 *_wpftmp.csproj
+
+# Agent Instructions
+Agent_Instructions/
+Agent_Instructions*.txt
