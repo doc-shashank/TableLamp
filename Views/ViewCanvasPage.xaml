@@ -77,14 +77,17 @@
         <!-- Centralized Card Container & Controls -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="800" HorizontalAlignment="Center" Spacing="20" Margin="32,24,32,40">
-                <!-- Centralized Card Container -->
+                <!-- Centralized Card Container (Click to flip text/image) -->
                 <Border x:Name="QuestionCardBorder"
                         Height="360"
                         CornerRadius="16"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
-                        Padding="32">
+                        Padding="32"
+                        IsHitTestVisible="True"
+                        Tapped="OnQuestionCardTapped"
+                        ToolTipService.ToolTip="Click card to switch between Text and Image view">
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <!-- Text Presentation Slot -->
                         <ScrollViewer x:Name="TextContainer" VerticalScrollBarVisibility="Auto">

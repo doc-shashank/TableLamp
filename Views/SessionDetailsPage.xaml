@@ -34,6 +34,15 @@
                     CornerRadius="14"
                     Padding="28">
                 <StackPanel Spacing="20">
+                    <!-- Mandatory Session Name Field (Above Page range) -->
+                    <StackPanel Spacing="6">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="Session Name" FontWeight="SemiBold" FontSize="14" />
+                            <TextBlock Text="*" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontWeight="Bold" />
+                        </StackPanel>
+                        <TextBox x:Name="SessionNameBox" PlaceholderText="e.g. Morning Study - Cell Biology" />
+                    </StackPanel>
+
                     <!-- Preset Page Range Lookup Section (At top of Subject field) -->
                     <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

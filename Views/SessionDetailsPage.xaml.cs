@@ -161,6 +161,17 @@ namespace TableLamp.Views
 
         private void OnNextClicked(object sender, RoutedEventArgs e)
         {
+            string sessionName = SessionNameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(sessionName))
+            {
+                ValidationInfoBar.Severity = InfoBarSeverity.Warning;
+                ValidationInfoBar.Title = "Session Name Required";
+                ValidationInfoBar.Message = "Session Name cannot be empty. Please enter a Session Name.";
+                ValidationInfoBar.IsOpen = true;
+                SessionNameBox.Focus(FocusState.Programmatic);
+                return;
+            }
+
             string subject = SubjectBox.Text.Trim();
             string chapterName = ChapterNameBox.Text.Trim();
             int chapterNumber = double.IsNaN(ChapterNumberBox.Value) ? 1 : (int)ChapterNumberBox.Value;
@@ -168,6 +179,8 @@ namespace TableLamp.Views
 
             if (string.IsNullOrWhiteSpace(subject))
             {
+                ValidationInfoBar.Severity = InfoBarSeverity.Warning;
+                ValidationInfoBar.Title = "Required Fields";
                 ValidationInfoBar.Message = "Please provide a Subject name.";
                 ValidationInfoBar.IsOpen = true;
                 SubjectBox.Focus(FocusState.Programmatic);
@@ -176,13 +189,13 @@ namespace TableLamp.Views
 
             if (string.IsNullOrWhiteSpace(chapterName))
             {
+                ValidationInfoBar.Severity = InfoBarSeverity.Warning;
+                ValidationInfoBar.Title = "Required Fields";
                 ValidationInfoBar.Message = "Please provide a Chapter Name.";
                 ValidationInfoBar.IsOpen = true;
                 ChapterNameBox.Focus(FocusState.Programmatic);
                 return;
             }
-
-            ValidationInfoBar.IsOpen = false;
 
             var tag = new Tag
             {
@@ -194,8 +207,23 @@ namespace TableLamp.Views
                 page_range = _currentPageRange ?? (StartPageBox.Value > 0 ? $"{StartPageBox.Value}-{EndPageBox.Value}" : null)
             };
 
-            // Navigate to EditCanvasPage with the created Tag
-            Frame.Navigate(typeof(EditCanvasPage), tag);
+            // Validate tag and enforce custom tag restriction:
+            // Custom tags cannot have a Subject matching any curated preset subject.
+            if (!CustomTagService.Instance.ValidateAndSaveCustomTag(tag, out string? customError))
+            {
+                ValidationInfoBar.Severity = InfoBarSeverity.Error;
+                ValidationInfoBar.Title = "Curated Subject Conflict";
+                ValidationInfoBar.Message = customError ?? "A custom tag cannot use a Subject that matches any curated preset subject.";
+                ValidationInfoBar.IsOpen = true;
+                SubjectBox.Focus(FocusState.Programmatic);
+                return;
+            }
+
+            ValidationInfoBar.IsOpen = false;
+
+            // Create initial session with time-seeded ID and pass to EditCanvasPage
+            var session = new BasicSessionBundle(null, false, DateTime.UtcNow.AddDays(3), sessionName, tag);
+            Frame.Navigate(typeof(EditCanvasPage), session);
         }
 
         private void NavigateBack()

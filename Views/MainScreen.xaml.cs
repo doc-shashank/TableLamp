@@ -36,6 +36,8 @@ namespace TableLamp.Views
             InvocationMode = LauncherMode.Normalize(argument);
         }
 
+        private bool _isReturningToLauncher = false;
+
         private void ConfigureWindowSizing()
         {
             try
@@ -49,6 +51,17 @@ namespace TableLamp.Views
                     if (AppWindowInstance != null)
                     {
                         AppWindowInstance.Title = $"Table Lamp - {InvocationMode}";
+
+                        // Closing the main window should open the launcher and not exit the app
+                        AppWindowInstance.Closing += (s, args) =>
+                        {
+                            if (!_isReturningToLauncher)
+                            {
+                                _isReturningToLauncher = true;
+                                var launcher = new TableLampLauncher();
+                                launcher.Activate();
+                            }
+                        };
 
                         if (AppWindowInstance.Presenter is OverlappedPresenter presenter)
                         {
@@ -67,8 +80,19 @@ namespace TableLamp.Views
 
         private void WireNavigationEvents()
         {
+            this.Closed += (s, e) =>
+            {
+                if (!_isReturningToLauncher)
+                {
+                    _isReturningToLauncher = true;
+                    var launcher = new TableLampLauncher();
+                    launcher.Activate();
+                }
+            };
+
             ReturnToLauncherButton.Click += (s, e) =>
             {
+                _isReturningToLauncher = true;
                 var launcher = new TableLampLauncher();
                 launcher.Activate();
                 this.Close();

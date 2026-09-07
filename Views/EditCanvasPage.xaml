@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:models="using:TableLamp.Models"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
@@ -14,7 +13,7 @@
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,0,1"
                 Background="{ThemeResource LayerFillColorDefaultBrush}"
-                Padding="28,14,28,14">
+                Padding="24,12,24,12">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <Button x:Name="BackButton"
@@ -39,20 +38,11 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Action Buttons: Add more Questions + Save Session -->
+                <!-- Action Button: Save Session -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12">
-                    <Button x:Name="AddQuestionButton"
-                            Style="{ThemeResource AccentButtonStyle}"
-                            Padding="16,8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="Add more Questions" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Button>
-
                     <Button x:Name="SaveSessionButton"
-                            Style="{ThemeResource DefaultButtonStyle}"
-                            Padding="16,8">
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Padding="18,8">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE74E;" FontSize="14" />
                             <TextBlock Text="Save Session" FontWeight="SemiBold" />
@@ -62,96 +52,236 @@
             </Grid>
         </Border>
 
-        <!-- Main Content Area: Question Cards List -->
-        <ScrollViewer Grid.Row="1" Padding="32,24,32,48">
-            <StackPanel MaxWidth="800" HorizontalAlignment="Center" Spacing="16">
-                <!-- Empty State -->
-                <Border x:Name="EmptyStateBorder"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="40"
-                        Margin="0,40,0,0"
-                        HorizontalAlignment="Stretch">
-                    <StackPanel Spacing="14" HorizontalAlignment="Center">
-                        <FontIcon Glyph="&#xE897;" FontSize="44" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
-                        <TextBlock Text="No Questions Added Yet" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <TextBlock Text="Click 'Add more Questions' to start creating questions for this session."
-                                   FontSize="13"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   HorizontalAlignment="Center" />
-                        <Button x:Name="EmptyAddButton"
-                                Content="Add more Questions"
-                                Style="{ThemeResource AccentButtonStyle}"
-                                HorizontalAlignment="Center"
-                                Padding="20,8"
-                                Margin="0,8,0,0" />
-                    </StackPanel>
-                </Border>
+        <!-- Main Content Area: Split View (Left: Question Cards, Right: Stacked Preview Cards) -->
+        <Grid Grid.Row="1" ColumnDefinitions="360,*">
+            <!-- Left Column: Question Cards List -->
+            <Border Grid.Column="0"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,1,0"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Left Column Header with Add Button -->
+                    <Border Grid.Row="0"
+                            Padding="16,14,16,14"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Questions List" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button x:Name="AddQuestionButton"
+                                    Grid.Column="1"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    Padding="12,6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE710;" FontSize="13" />
+                                    <TextBlock Text="Add Question" FontSize="12" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
 
-                <!-- Questions Container -->
-                <ItemsControl x:Name="QuestionsItemsControl">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="0,0,0,12"
+                    <!-- Question Cards Scrollable List -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14,14,14,24">
+                        <StackPanel Spacing="10">
+                            <!-- Empty State for Questions -->
+                            <Border x:Name="LeftEmptyStateBorder"
                                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="18,14">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <!-- Question Index / Icon -->
-                                    <Border Grid.Column="0"
-                                            Width="36"
-                                            Height="36"
-                                            CornerRadius="8"
-                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                            Margin="0,0,14,0"
-                                            VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE897;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Border>
-
-                                    <!-- Question Content Preview -->
-                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" Tag="{Binding}">
-                                        <TextBlock Text="{Binding SummaryText}"
-                                                   FontSize="14"
-                                                   FontWeight="SemiBold"
-                                                   TextWrapping="NoWrap"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                                    CornerRadius="4"
-                                                    Padding="6,2">
-                                                <TextBlock Text="Question Card" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            </Border>
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <!-- Actions: Edit & Delete -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <Button ToolTipService.ToolTip="Edit Question"
-                                                Style="{ThemeResource SubtleButtonStyle}"
-                                                Padding="8"
-                                                Click="OnEditQuestionClicked"
-                                                Tag="{Binding}">
-                                            <FontIcon Glyph="&#xE70F;" FontSize="14" />
-                                        </Button>
-                                        <Button ToolTipService.ToolTip="Delete Question"
-                                                Style="{ThemeResource SubtleButtonStyle}"
-                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                                Padding="8"
-                                                Click="OnDeleteQuestionClicked"
-                                                Tag="{Binding}">
-                                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
+                                    CornerRadius="10"
+                                    Padding="24"
+                                    Margin="0,20,0,0"
+                                    HorizontalAlignment="Stretch">
+                                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE897;" FontSize="32" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="No Questions Yet" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                    <TextBlock Text="Click 'Add Question' above to create one."
+                                               FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center" />
+                                </StackPanel>
                             </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </ScrollViewer>
+
+                            <!-- Items Container -->
+                            <ItemsControl x:Name="QuestionsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="10"
+                                                Padding="12,10"
+                                                IsHitTestVisible="True"
+                                                Tapped="OnQuestionCardSelected"
+                                                Tag="{Binding}">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <!-- Icon -->
+                                                <Border Grid.Column="0"
+                                                        Width="30"
+                                                        Height="30"
+                                                        CornerRadius="6"
+                                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                                        Margin="0,0,10,0"
+                                                        VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE897;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+
+                                                <!-- Summary Text -->
+                                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding SummaryText}"
+                                                               FontSize="13"
+                                                               FontWeight="Medium"
+                                                               TextWrapping="NoWrap"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="Question Card" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Actions: Delete -->
+                                                <Button Grid.Column="2"
+                                                        ToolTipService.ToolTip="Delete Question"
+                                                        Style="{ThemeResource SubtleButtonStyle}"
+                                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                        Padding="6"
+                                                        Click="OnDeleteQuestionClicked"
+                                                        Tag="{Binding}">
+                                                    <FontIcon Glyph="&#xE74D;" FontSize="13" />
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Right Column: Stacked Text and Image PreviewCards -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="28,20,28,32">
+                <StackPanel MaxWidth="800" Spacing="20">
+                    <!-- Right Placeholder (When No Question Selected) -->
+                    <Border x:Name="NoSelectionPlaceholder"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="48"
+                            Margin="0,40,0,0">
+                        <StackPanel Spacing="12" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE8EC;" FontSize="40" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="Select a Question" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                            <TextBlock Text="Click any question card on the left to preview and edit its Text and Image components."
+                                       FontSize="13"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Active Question Preview Container (Stacked: Text PreviewCard above Image PreviewCard) -->
+                    <StackPanel x:Name="PreviewCardsContainer" Spacing="20" Visibility="Collapsed">
+                        <!-- Preview Card 1: Text Preview Card -->
+                        <Border x:Name="TextPreviewCard"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="20">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8D2;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Text Preview" FontWeight="SemiBold" FontSize="15" />
+                                        <TextBlock Text="(Top Element)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <!-- Pencil Icon Button to edit text -->
+                                    <Button x:Name="EditTextPencilButton"
+                                            Grid.Column="1"
+                                            Style="{ThemeResource SubtleButtonStyle}"
+                                            Padding="8"
+                                            ToolTipService.ToolTip="Edit Text Content">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE70F;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Edit Text" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Text Preview Content -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        MinHeight="90"
+                                        Padding="16">
+                                    <TextBlock x:Name="TextPreviewContentBlock"
+                                               FontSize="14"
+                                               TextWrapping="Wrap"
+                                               LineHeight="22"
+                                               Text="No text content." />
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Preview Card 2: Image Preview Card -->
+                        <Border x:Name="ImagePreviewCard"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="20">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xEB9F;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Image Preview" FontWeight="SemiBold" FontSize="15" />
+                                        <TextBlock Text="(Bottom Element)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <!-- Pencil Icon Button to edit image -->
+                                    <Button x:Name="EditImagePencilButton"
+                                            Grid.Column="1"
+                                            Style="{ThemeResource SubtleButtonStyle}"
+                                            Padding="8"
+                                            ToolTipService.ToolTip="Edit Image Content">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE70F;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Edit Image" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Image Preview Content -->
+                                <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        MinHeight="140"
+                                        Padding="16">
+                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                        <TextBlock x:Name="NoImagePlaceholderText"
+                                                   Text="No image attached. Click the pencil icon above to attach an image."
+                                                   FontSize="13"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                        <Image x:Name="ImagePreviewContentImage"
+                                               MaxHeight="260"
+                                               Stretch="Uniform"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Visibility="Collapsed" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Page>

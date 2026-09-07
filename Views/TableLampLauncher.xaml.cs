@@ -41,8 +41,8 @@ namespace TableLamp.Views
                     {
                         _appWindow.Title = "Table Lamp Launcher";
                         
-                        const int width = 860;
-                        const int height = 490;
+                        const int width = 1000;
+                        const int height = 620;
                         _appWindow.Resize(new Windows.Graphics.SizeInt32(width, height));
 
                         // Center on display work area
@@ -90,13 +90,11 @@ namespace TableLamp.Views
             DevToolsButton.Click += OnDevToolsButtonClicked;
         }
 
-        private async void OnDevToolsButtonClicked(object sender, RoutedEventArgs e)
+        private void OnDevToolsButtonClicked(object sender, RoutedEventArgs e)
         {
-            var dialog = new DevToolsDialog
-            {
-                XamlRoot = this.Content.XamlRoot
-            };
-            await dialog.ShowAsync();
+            // Open maximized DevToolsWindow
+            var devTools = new DevToolsWindow();
+            devTools.Activate();
         }
 
         #region Basic Card Interactions

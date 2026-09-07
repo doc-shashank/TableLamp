@@ -81,6 +81,40 @@ namespace TableLamp.Models
             return list.ToArray();
         }
 
+        /// <summary>
+        /// Updates the text element of the question while preserving any existing image element.
+        /// </summary>
+        public void UpdateText(string? newText)
+        {
+            var list = new System.Collections.Generic.List<Element>();
+            if (!string.IsNullOrWhiteSpace(newText))
+            {
+                list.Add(Element.FromText(newText));
+            }
+            if (HasImage && ImageElement != null)
+            {
+                list.Add(ImageElement);
+            }
+            question_element_array = list.ToArray();
+        }
+
+        /// <summary>
+        /// Updates the image element of the question while preserving any existing text element.
+        /// </summary>
+        public void UpdateImage(string? newImagePath)
+        {
+            var list = new System.Collections.Generic.List<Element>();
+            if (HasText && TextElement != null)
+            {
+                list.Add(TextElement);
+            }
+            if (!string.IsNullOrWhiteSpace(newImagePath))
+            {
+                list.Add(new Element { simple_image = newImagePath });
+            }
+            question_element_array = list.ToArray();
+        }
+
         public override string ToString()
         {
             int qCount = question_element_array?.Length ?? 0;

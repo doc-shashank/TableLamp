@@ -10,7 +10,6 @@ namespace TableLamp.Models
     /// </summary>
     public class BasicSessionBundle : Bundle
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
         public string? SessionName { get; set; }
         public Tag? Tag { get; set; }
         public int CurrentQuestionIndex { get; set; }

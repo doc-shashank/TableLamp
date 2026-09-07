@@ -16,6 +16,29 @@ namespace TableLamp.Models
         /// </summary>
         public IReadOnlyList<BaseQuestion> questions => _questions.AsReadOnly();
 
+        private static readonly object _rngLock = new();
+
+        /// <summary>
+        /// Generates a unique Bundle ID using a random number seeded with the creation timestamp ticks.
+        /// </summary>
+        public static string GenerateTimeSeededId()
+        {
+            long ticks = DateTime.UtcNow.Ticks;
+            int seed = (int)(ticks & 0x7FFFFFFF);
+            int randomPart;
+            lock (_rngLock)
+            {
+                var rng = new Random(seed);
+                randomPart = rng.Next(100000, 999999);
+            }
+            return $"BND-{ticks}-{randomPart}";
+        }
+
+        /// <summary>
+        /// Unique identifier generated using a random number seeded with time of creation.
+        /// </summary>
+        public string Id { get; set; } = GenerateTimeSeededId();
+
         /// <summary>
         /// Date when the bundle was created and stored by User.
         /// </summary>

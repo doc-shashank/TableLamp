@@ -1,0 +1,72 @@
+<ContentDialog
+    x:Class="TableLamp.Views.SingleElementEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Edit Element"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    Style="{ThemeResource DefaultContentDialogStyle}">
+
+    <StackPanel Spacing="16" MinWidth="480" Margin="0,8,0,0">
+        <!-- Text Editing Panel -->
+        <StackPanel x:Name="TextEditingPanel" Spacing="8" Visibility="Collapsed">
+            <TextBlock Text="Question Text" FontWeight="SemiBold" FontSize="14" />
+            <TextBox x:Name="EditContentTextBox"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="160"
+                     MaxHeight="280"
+                     PlaceholderText="Type the question text here..." />
+        </StackPanel>
+
+        <!-- Image Editing Panel -->
+        <StackPanel x:Name="ImageEditingPanel" Spacing="12" Visibility="Collapsed">
+            <TextBlock Text="Image Path or URL" FontWeight="SemiBold" FontSize="14" />
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox x:Name="EditImagePathBox"
+                         PlaceholderText="e.g. C:\Images\diagram.png or https://..."
+                         Grid.Column="0" />
+
+                <Button x:Name="BrowseButton"
+                        Content="Browse..."
+                        Style="{ThemeResource DefaultButtonStyle}"
+                        Grid.Column="1" />
+
+                <Button x:Name="ClearButton"
+                        ToolTipService.ToolTip="Clear Image"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Grid.Column="2">
+                    <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                </Button>
+            </Grid>
+
+            <!-- Image Preview Area -->
+            <Border x:Name="ImagePreviewBorder"
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Height="200"
+                    Padding="8"
+                    Visibility="Collapsed">
+                <Image x:Name="PreviewImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+        </StackPanel>
+
+        <!-- Validation Error -->
+        <TextBlock x:Name="ValidationErrorText"
+                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                   FontSize="12"
+                   Visibility="Collapsed" />
+    </StackPanel>
+</ContentDialog>

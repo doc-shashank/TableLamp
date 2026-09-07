@@ -193,5 +193,37 @@ namespace TableLamp.Views
                 DisplayCurrentQuestion();
             }
         }
+
+        private void OnQuestionCardTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            if (_session == null || _currentIndex < 0 || _currentIndex >= _session.questions.Count) return;
+            var question = _session.questions[_currentIndex] as SimpleQuestion;
+            if (question == null) return;
+
+            if (question.HasText && question.HasImage)
+            {
+                // Toggle between Text and Image
+                if (ImageContainer.Visibility == Visibility.Visible)
+                {
+                    TextRadioButton.IsChecked = true;
+                    UpdateViewMode("Text", question);
+                }
+                else
+                {
+                    ImageRadioButton.IsChecked = true;
+                    UpdateViewMode("Image", question);
+                }
+            }
+            else if (question.HasImage)
+            {
+                ImageRadioButton.IsChecked = true;
+                UpdateViewMode("Image", question);
+            }
+            else
+            {
+                TextRadioButton.IsChecked = true;
+                UpdateViewMode("Text", question);
+            }
+        }
     }
 }
