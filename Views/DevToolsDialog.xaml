@@ -1,0 +1,119 @@
+<ContentDialog
+    x:Class="TableLamp.Views.DevToolsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Developer Tools - Presets Tag Generator"
+    PrimaryButtonText="Apply to Database"
+    CloseButtonText="Close"
+    DefaultButton="Primary"
+    Style="{ThemeResource DefaultContentDialogStyle}">
+
+    <Grid Width="720" MaxHeight="600" RowDefinitions="Auto,*">
+        <!-- Top Toolbar & Help -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="Create, edit, and export hierarchical preset tag files for Table Lamp."
+                       FontSize="13"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="Tip: Use Up / Down arrow keys while editing to quickly jump between field lines."
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+        </StackPanel>
+
+        <!-- Main Body: Split into Interactive Field Form and JSON Output Preview -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="18">
+                <!-- Interactive Line Selection & Field Form -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="18">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE70F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Preset Entry Editor" FontSize="15" FontWeight="SemiBold" />
+                        </StackPanel>
+
+                        <!-- Field 0: Subject Identifier -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Subject Key" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldSubjectKey" Grid.Column="1" Text="Subject1" PlaceholderText="e.g. Subject1" />
+                        </Grid>
+
+                        <!-- Field 1: Short Name -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Short Name" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldShortName" Grid.Column="1" Text="Robins Physiology" PlaceholderText="e.g. Robins Physiology" />
+                        </Grid>
+
+                        <!-- Field 2: Full Name -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Full Book Name" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldFullName" Grid.Column="1" Text="Robins Pathologic Basis of Disease" PlaceholderText="e.g. Robins Pathologic Basis of Disease" />
+                        </Grid>
+
+                        <!-- Field 3: Edition -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Edition" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldEdition" Grid.Column="1" Text="7th" PlaceholderText="e.g. 7th" />
+                        </Grid>
+
+                        <!-- Field 4: Chapter Name -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Chapter Name" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldChapterName" Grid.Column="1" Text="Cell Injury" PlaceholderText="e.g. Cell Injury" />
+                        </Grid>
+
+                        <!-- Field 5: Topic Name -->
+                        <Grid ColumnDefinitions="140,*">
+                            <TextBlock Text="Topic Name" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldTopicName" Grid.Column="1" Text="Causes of Cell Injury" PlaceholderText="e.g. Causes of Cell Injury" />
+                        </Grid>
+
+                        <!-- Field 6 & 7: Start and End Page Grid -->
+                        <Grid ColumnDefinitions="140,*,16,*">
+                            <TextBlock Text="Page Range" VerticalAlignment="Center" FontSize="13" />
+                            <TextBox x:Name="FieldStartPage" Grid.Column="1" Text="23" PlaceholderText="Start Page (e.g. 23)" />
+                            <TextBox x:Name="FieldEndPage" Grid.Column="3" Text="27" PlaceholderText="End Page (e.g. 27)" />
+                        </Grid>
+
+                        <!-- Action row for adding to tree -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+                            <Button x:Name="LoadStarterButton" Content="Load Canonical Example" Style="{ThemeResource SubtleButtonStyle}" />
+                            <Button x:Name="AddEntryButton" Grid.Column="1" Content="Add / Update Entry in JSON" Style="{ThemeResource AccentButtonStyle}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Formatted JSON Output Preview -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="18">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Text="Formatted Presets JSON File" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button x:Name="CopyJsonButton" Grid.Column="1" Content="Copy JSON" Style="{ThemeResource SubtleButtonStyle}" Margin="0,0,8,0" />
+                            <Button x:Name="ExportJsonButton" Grid.Column="2" Content="Export to File" Style="{ThemeResource DefaultButtonStyle}" />
+                        </Grid>
+
+                        <TextBox x:Name="JsonOutputBox"
+                                 FontFamily="Consolas"
+                                 FontSize="12"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 MinHeight="180"
+                                 MaxHeight="260" />
+
+                        <InfoBar x:Name="StatusInfoBar" IsOpen="False" IsClosable="True" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</ContentDialog>

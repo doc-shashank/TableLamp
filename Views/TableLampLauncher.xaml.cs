@@ -85,6 +85,18 @@ namespace TableLamp.Views
             // 3. Generator Card - Non-interactable (for now)
             GeneratorCard.PointerEntered += OnDisabledCardPointerEntered;
             GeneratorCard.PointerExited += OnDisabledCardPointerExited;
+
+            // 4. Dev Tools Button
+            DevToolsButton.Click += OnDevToolsButtonClicked;
+        }
+
+        private async void OnDevToolsButtonClicked(object sender, RoutedEventArgs e)
+        {
+            var dialog = new DevToolsDialog
+            {
+                XamlRoot = this.Content.XamlRoot
+            };
+            await dialog.ShowAsync();
         }
 
         #region Basic Card Interactions

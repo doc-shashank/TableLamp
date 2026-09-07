@@ -149,12 +149,30 @@
                 </Border>
             </Grid>
 
-            <!-- Launcher Footer -->
-            <StackPanel Grid.Row="2" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="Table Lamp" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                <TextBlock Text="Desktop WinUI 3 Edition" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-            </StackPanel>
+            <!-- Launcher Footer with Dev Tools Button -->
+            <Grid Grid.Row="2" Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Table Lamp" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="Version 0.0.3" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+
+                <Button x:Name="DevToolsButton"
+                        Grid.Column="1"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Padding="10,6"
+                        ToolTipService.ToolTip="Open Developer Tools &amp; Preset Tag Generator">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE90F;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock Text="Dev Tools" FontSize="12" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
