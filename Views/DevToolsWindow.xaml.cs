@@ -56,6 +56,8 @@ namespace TableLamp.Views
         private string? _activeWorkspaceDir;
 
         private bool _isUpdatingPreviewText;
+        private string _previewMode = "Simplified"; // "Simplified" or "JSON"
+        private readonly HashSet<string> _expandedNodes = new(StringComparer.OrdinalIgnoreCase);
 
         // Navigation history
         private readonly List<string> _navigationHistory = new();
@@ -217,6 +219,15 @@ namespace TableLamp.Views
             HistoryBackButton.Click += OnHistoryBackClicked;
             HistoryForwardButton.Click += OnHistoryForwardClicked;
 
+            // Wire Preview mode switcher
+            SimplifiedModeButton.Click += (s, e) => SwitchPreviewMode("Simplified");
+            JsonModeButton.Click += (s, e) => SwitchPreviewMode("JSON");
+
+            // Wire Delete buttons
+            DeleteSubjectButton.Click += (s, e) => DeleteSubject(_activeSubjectKey);
+            DeleteChapterButton.Click += (s, e) => DeleteChapter(_activeSubjectKey, _activeChapterKey);
+            DeleteTopicButton.Click += (s, e) => DeleteTopic(_activeSubjectKey, _activeChapterKey, _activeTopicKey);
+
             // Wire Subject panel actions
             UpdateSubjectButton.Click += OnUpdateSubjectClicked;
             AddChapterButton.Click += OnAddChapterClicked;
@@ -232,6 +243,15 @@ namespace TableLamp.Views
 
             // Wire Root / General actions
             AddSubjectButton.Click += OnAddSubjectClicked;
+
+            // Initially expand all subjects in simplified preview
+            foreach (var key in _tree.Keys)
+            {
+                _expandedNodes.Add(key);
+            }
+
+            // Default to Simplified mode
+            SwitchPreviewMode("Simplified");
 
             // Initial detection
             DetectContextFromSelection();
@@ -352,13 +372,17 @@ namespace TableLamp.Views
 
         private void ShowSubjectPanel(string subjectKey, PresetSubject subject)
         {
-            ContextTitleText.Text = $"Selected: Subject [{subject.short_name ?? subjectKey}]";
+            int sIdx = _tree.Keys.ToList().IndexOf(subjectKey) + 1;
+            string displayId = $"Subject{(sIdx > 0 ? sIdx : 1)}";
+
+            ContextTitleText.Text = $"Selected: {displayId} [{subject.short_name ?? subjectKey}]";
             SubjectPanel.Visibility = Visibility.Visible;
             ChapterPanel.Visibility = Visibility.Collapsed;
             TopicPanel.Visibility = Visibility.Collapsed;
             GeneralPanel.Visibility = Visibility.Collapsed;
 
-            SubjectKeyBox.Text = subjectKey;
+            SubjectKeyBox.Text = displayId;
+            SubjectKeyBox.IsReadOnly = true;
             SubjectShortNameBox.Text = subject.short_name ?? "";
             SubjectFullNameBox.Text = subject.full_name ?? "";
             SubjectEditionBox.Text = subject.edition ?? "";
@@ -366,13 +390,19 @@ namespace TableLamp.Views
 
         private void ShowChapterPanel(string subjectKey, string chapterKey, PresetChapter chapter)
         {
-            ContextTitleText.Text = $"Selected: Chapter [{chapter.name ?? chapterKey}]";
+            int cIdx = 1;
+            if (_tree.TryGetValue(subjectKey, out var subj) && subj.Chapters != null)
+            {
+                cIdx = subj.Chapters.Keys.ToList().IndexOf(chapterKey) + 1;
+            }
+            string displayId = $"Chapter{(cIdx > 0 ? cIdx : 1)}";
+
+            ContextTitleText.Text = $"Selected: {displayId} [{chapter.name ?? chapterKey}]";
             SubjectPanel.Visibility = Visibility.Collapsed;
             ChapterPanel.Visibility = Visibility.Visible;
             TopicPanel.Visibility = Visibility.Collapsed;
             GeneralPanel.Visibility = Visibility.Collapsed;
 
-            // Parent Subject is non-editable; shows short_name and navigates to subject on click
             string parentShortName = subjectKey;
             if (_tree.TryGetValue(subjectKey, out var s) && !string.IsNullOrWhiteSpace(s.short_name))
             {
@@ -380,21 +410,30 @@ namespace TableLamp.Views
             }
             ChapterParentSubjectText.Text = $"{parentShortName} (Click to navigate)";
 
-            // Chapter number as integer
+            ChapterKeyBox.Text = displayId;
+            ChapterKeyBox.IsReadOnly = true;
             ChapterNumberInput.Value = chapter.ChapterNumber;
             ChapterNameBox.Text = chapter.name ?? "";
         }
 
         private void ShowTopicPanel(string chapterKey, string topicKey, PresetTopic topic)
         {
-            ContextTitleText.Text = $"Selected: Topic [{topic.name ?? topicKey}]";
+            int tIdx = 1;
+            if (!string.IsNullOrEmpty(_activeSubjectKey) && _tree.TryGetValue(_activeSubjectKey, out var subj) && subj.Chapters != null && subj.Chapters.TryGetValue(chapterKey, out var ch) && ch.Topics != null)
+            {
+                tIdx = ch.Topics.Keys.ToList().IndexOf(topicKey) + 1;
+            }
+            string displayId = $"Topic{(tIdx > 0 ? tIdx : 1)}";
+
+            ContextTitleText.Text = $"Selected: {displayId} [{topic.name ?? topicKey}]";
             SubjectPanel.Visibility = Visibility.Collapsed;
             ChapterPanel.Visibility = Visibility.Collapsed;
             TopicPanel.Visibility = Visibility.Visible;
             GeneralPanel.Visibility = Visibility.Collapsed;
 
             TopicParentChapterBox.Text = chapterKey;
-            TopicKeyBox.Text = topicKey;
+            TopicKeyBox.Text = displayId;
+            TopicKeyBox.IsReadOnly = true;
             TopicNameBox.Text = topic.name ?? "";
             TopicStartPageBox.Text = topic.start_page ?? "";
             TopicEndPageBox.Text = topic.end_page ?? "";
@@ -522,6 +561,25 @@ namespace TableLamp.Views
             _activeSubjectKey = elem.SubjectKey;
             _activeChapterKey = elem.ChapterKey;
             _activeTopicKey = elem.TopicKey;
+
+            // Auto-expand in Simplified view
+            if (!string.IsNullOrEmpty(elem.SubjectKey))
+            {
+                _expandedNodes.Add(elem.SubjectKey);
+            }
+            if (!string.IsNullOrEmpty(elem.SubjectKey) && !string.IsNullOrEmpty(elem.ChapterKey))
+            {
+                _expandedNodes.Add($"{elem.SubjectKey}/{elem.ChapterKey}");
+            }
+            if (!string.IsNullOrEmpty(elem.SubjectKey) && !string.IsNullOrEmpty(elem.ChapterKey) && !string.IsNullOrEmpty(elem.TopicKey))
+            {
+                _expandedNodes.Add($"{elem.SubjectKey}/{elem.ChapterKey}/{elem.TopicKey}");
+            }
+
+            if (_previewMode == "Simplified")
+            {
+                RenderSimplifiedTree();
+            }
 
             JsonPreviewBox.Focus(FocusState.Programmatic);
             JsonPreviewBox.SelectionStart = elem.CharOffset;
@@ -736,6 +794,11 @@ namespace TableLamp.Views
             string newJson = _generator.GenerateJson(_tree);
             SetJsonText(newJson);
 
+            if (_previewMode == "Simplified")
+            {
+                RenderSimplifiedTree();
+            }
+
             var elements = ScanElementPositions(newJson);
             DevElementPosition? target = null;
 
@@ -773,6 +836,424 @@ namespace TableLamp.Views
                     DetectContextFromSelection();
                 }
             }
+        }
+
+        #endregion
+
+        #region Simplified Tree & Element Deletion
+
+        private void SwitchPreviewMode(string mode)
+        {
+            _previewMode = mode;
+            if (mode == "Simplified")
+            {
+                SimplifiedModeButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
+                JsonModeButton.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
+
+                SimplifiedTreeScrollViewer.Visibility = Visibility.Visible;
+                ActiveLineIndicatorBorder.Visibility = Visibility.Collapsed;
+                JsonPreviewBox.Visibility = Visibility.Collapsed;
+
+                SyncTreeFromPreviewText();
+                RenderSimplifiedTree();
+            }
+            else
+            {
+                SimplifiedModeButton.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
+                JsonModeButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
+
+                SimplifiedTreeScrollViewer.Visibility = Visibility.Collapsed;
+                ActiveLineIndicatorBorder.Visibility = Visibility.Visible;
+                JsonPreviewBox.Visibility = Visibility.Visible;
+
+                SetJsonText(_generator.GenerateJson(_tree));
+                DetectContextFromSelection();
+            }
+        }
+
+        private void RenderSimplifiedTree()
+        {
+            SimplifiedTreeContainer.Children.Clear();
+
+            if (_tree == null || _tree.Count == 0)
+            {
+                var emptyText = new TextBlock
+                {
+                    Text = "Preset tag database is empty. Click 'Start from Scratch' or 'Add New Subject'.",
+                    FontSize = 12,
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                    Margin = new Thickness(12)
+                };
+                SimplifiedTreeContainer.Children.Add(emptyText);
+                return;
+            }
+
+            int sIdx = 1;
+            foreach (var (subjKey, subj) in _tree)
+            {
+                string subjDisplayId = $"Subject{sIdx}";
+                string subjNodeKey = subjKey;
+                bool isSubjExpanded = _expandedNodes.Contains(subjNodeKey);
+                bool isSubjSelected = string.Equals(_activeSubjectKey, subjKey, StringComparison.OrdinalIgnoreCase)
+                                   && string.IsNullOrEmpty(_activeChapterKey)
+                                   && string.IsNullOrEmpty(_activeTopicKey);
+
+                var subjItem = CreateLevelNode(
+                    displayId: subjDisplayId,
+                    levelName: subj.short_name,
+                    levelType: "Subject",
+                    indent: 0,
+                    isExpanded: isSubjExpanded,
+                    isSelected: isSubjSelected,
+                    onClick: () =>
+                    {
+                        ToggleNodeExpansion(subjNodeKey);
+                        SelectSubject(subjKey);
+                    },
+                    onAddChild: () => AddChapterToSubject(subjKey),
+                    onDelete: () => DeleteSubject(subjKey)
+                );
+                SimplifiedTreeContainer.Children.Add(subjItem);
+
+                if (isSubjExpanded)
+                {
+                    // Unhighlighted properties indented 24px (simplified variable names)
+                    if (!string.IsNullOrWhiteSpace(subj.short_name))
+                        SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"short name: {subj.short_name}", 24));
+                    if (!string.IsNullOrWhiteSpace(subj.full_name))
+                        SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"full name: {subj.full_name}", 24));
+                    if (!string.IsNullOrWhiteSpace(subj.edition))
+                        SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"edition: {subj.edition}", 24));
+
+                    if (subj.Chapters != null)
+                    {
+                        int cIdx = 1;
+                        foreach (var (chKey, ch) in subj.Chapters)
+                        {
+                            string chDisplayId = $"Chapter{cIdx}";
+                            string chNodeKey = $"{subjKey}/{chKey}";
+                            bool isChExpanded = _expandedNodes.Contains(chNodeKey);
+                            bool isChSelected = string.Equals(_activeSubjectKey, subjKey, StringComparison.OrdinalIgnoreCase)
+                                             && string.Equals(_activeChapterKey, chKey, StringComparison.OrdinalIgnoreCase)
+                                             && string.IsNullOrEmpty(_activeTopicKey);
+
+                            var chItem = CreateLevelNode(
+                                displayId: chDisplayId,
+                                levelName: ch.name,
+                                levelType: "Chapter",
+                                indent: 24,
+                                isExpanded: isChExpanded,
+                                isSelected: isChSelected,
+                                onClick: () =>
+                                {
+                                    ToggleNodeExpansion(chNodeKey);
+                                    SelectChapter(subjKey, chKey);
+                                },
+                                onAddChild: () => AddTopicToChapter(subjKey, chKey),
+                                onDelete: () => DeleteChapter(subjKey, chKey)
+                            );
+                            SimplifiedTreeContainer.Children.Add(chItem);
+
+                            if (isChExpanded)
+                            {
+                                // Unhighlighted properties indented 48px (simplified variable names)
+                                if (!string.IsNullOrWhiteSpace(ch.name))
+                                    SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"name: {ch.name}", 48));
+                                if (ch.ChapterNumber > 0)
+                                    SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"number: {ch.ChapterNumber}", 48));
+
+                                if (ch.Topics != null)
+                                {
+                                    int tIdx = 1;
+                                    foreach (var (topKey, top) in ch.Topics)
+                                    {
+                                        string topDisplayId = $"Topic{tIdx}";
+                                        string topNodeKey = $"{subjKey}/{chKey}/{topKey}";
+                                        bool isTopExpanded = _expandedNodes.Contains(topNodeKey);
+                                        bool isTopSelected = string.Equals(_activeSubjectKey, subjKey, StringComparison.OrdinalIgnoreCase)
+                                                          && string.Equals(_activeChapterKey, chKey, StringComparison.OrdinalIgnoreCase)
+                                                          && string.Equals(_activeTopicKey, topKey, StringComparison.OrdinalIgnoreCase);
+
+                                        var topItem = CreateLevelNode(
+                                            displayId: topDisplayId,
+                                            levelName: top.name,
+                                            levelType: "Topic",
+                                            indent: 48,
+                                            isExpanded: isTopExpanded,
+                                            isSelected: isTopSelected,
+                                            onClick: () =>
+                                            {
+                                                ToggleNodeExpansion(topNodeKey);
+                                                SelectTopic(subjKey, chKey, topKey);
+                                            },
+                                            onAddChild: null,
+                                            onDelete: () => DeleteTopic(subjKey, chKey, topKey)
+                                        );
+                                        SimplifiedTreeContainer.Children.Add(topItem);
+
+                                        if (isTopExpanded)
+                                        {
+                                            // Unhighlighted properties indented 72px (simplified variable names: name, start, end)
+                                            if (!string.IsNullOrWhiteSpace(top.name))
+                                                SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"name: {top.name}", 72));
+                                            if (!string.IsNullOrWhiteSpace(top.start_page))
+                                                SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"start: {top.start_page}", 72));
+                                            if (!string.IsNullOrWhiteSpace(top.end_page))
+                                                SimplifiedTreeContainer.Children.Add(CreatePropertyNode($"end: {top.end_page}", 72));
+                                        }
+                                        tIdx++;
+                                    }
+                                }
+                            }
+                            cIdx++;
+                        }
+                    }
+                }
+                sIdx++;
+            }
+        }
+
+        private FrameworkElement CreateLevelNode(
+            string displayId,
+            string? levelName,
+            string levelType,
+            int indent,
+            bool isExpanded,
+            bool isSelected,
+            Action onClick,
+            Action? onAddChild,
+            Action onDelete)
+        {
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(indent, 2, 0, 2),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                BorderThickness = new Thickness(1),
+                IsHitTestVisible = true
+            };
+
+            if (isSelected)
+            {
+                if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush ab)
+                {
+                    border.Background = ab;
+                    border.BorderBrush = ab;
+                }
+            }
+            else
+            {
+                if (Application.Current.Resources.TryGetValue("LayerFillColorDefaultBrush", out object? layer) && layer is Brush lb)
+                {
+                    border.Background = lb;
+                }
+                if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush sb)
+                {
+                    border.BorderBrush = sb;
+                }
+            }
+
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+
+            var chevron = new FontIcon
+            {
+                Glyph = isExpanded ? "\uE70D" : "\uE76C",
+                FontSize = 10,
+                Foreground = isSelected ? new SolidColorBrush(Microsoft.UI.Colors.White)
+                                        : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            };
+            sp.Children.Add(chevron);
+
+            var idBlock = new TextBlock
+            {
+                Text = displayId,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                FontSize = 12,
+                Foreground = isSelected ? new SolidColorBrush(Microsoft.UI.Colors.White)
+                                        : (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
+            };
+            sp.Children.Add(idBlock);
+
+            if (!string.IsNullOrWhiteSpace(levelName))
+            {
+                var nameBlock = new TextBlock
+                {
+                    Text = $"({levelName})",
+                    FontSize = 11,
+                    Foreground = isSelected ? new SolidColorBrush(ColorHelper.FromArgb(220, 255, 255, 255))
+                                            : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                };
+                sp.Children.Add(nameBlock);
+            }
+
+            border.Child = sp;
+
+            border.Tapped += (s, e) =>
+            {
+                e.Handled = true;
+                onClick();
+            };
+
+            var flyout = new MenuFlyout();
+            if (onAddChild != null)
+            {
+                string addText = levelType == "Subject" ? "Add New Chapter" : "Add New Topic";
+                var addItem = new MenuFlyoutItem { Text = addText, Icon = new FontIcon { Glyph = "\uE710" } };
+                addItem.Click += (s, e) => onAddChild();
+                flyout.Items.Add(addItem);
+                flyout.Items.Add(new MenuFlyoutSeparator());
+            }
+
+            var deleteItem = new MenuFlyoutItem
+            {
+                Text = $"Delete {levelType}",
+                Icon = new FontIcon { Glyph = "\uE74D" }
+            };
+            deleteItem.Click += (s, e) => onDelete();
+            flyout.Items.Add(deleteItem);
+
+            border.ContextFlyout = flyout;
+
+            return border;
+        }
+
+        private FrameworkElement CreatePropertyNode(string propertyText, int indent)
+        {
+            return new TextBlock
+            {
+                Text = $"- {propertyText}",
+                FontSize = 11,
+                Margin = new Thickness(indent, 1, 0, 1),
+                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                FontFamily = new FontFamily("Consolas, Cascadia Code, Courier New")
+            };
+        }
+
+        private void ToggleNodeExpansion(string nodeKey)
+        {
+            if (_expandedNodes.Contains(nodeKey))
+                _expandedNodes.Remove(nodeKey);
+            else
+                _expandedNodes.Add(nodeKey);
+
+            RenderSimplifiedTree();
+        }
+
+        private void SelectSubject(string subjectKey)
+        {
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = null;
+            _activeTopicKey = null;
+
+            if (_tree.TryGetValue(subjectKey, out var subj))
+            {
+                ShowSubjectPanel(subjectKey, subj);
+                RecordHistoryToken($"subject:{subjectKey}");
+            }
+            RenderSimplifiedTree();
+        }
+
+        private void SelectChapter(string subjectKey, string chapterKey)
+        {
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = chapterKey;
+            _activeTopicKey = null;
+
+            if (_tree.TryGetValue(subjectKey, out var subj) && subj.Chapters != null && subj.Chapters.TryGetValue(chapterKey, out var ch))
+            {
+                ShowChapterPanel(subjectKey, chapterKey, ch);
+                RecordHistoryToken($"chapter:{subjectKey}:{chapterKey}");
+            }
+            RenderSimplifiedTree();
+        }
+
+        private void SelectTopic(string subjectKey, string chapterKey, string topicKey)
+        {
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = chapterKey;
+            _activeTopicKey = topicKey;
+
+            if (_tree.TryGetValue(subjectKey, out var subj) && subj.Chapters != null && subj.Chapters.TryGetValue(chapterKey, out var ch) && ch.Topics != null && ch.Topics.TryGetValue(topicKey, out var top))
+            {
+                ShowTopicPanel(chapterKey, topicKey, top);
+                RecordHistoryToken($"topic:{subjectKey}:{chapterKey}:{topicKey}");
+            }
+            RenderSimplifiedTree();
+        }
+
+        private void AddChapterToSubject(string subjectKey)
+        {
+            _activeSubjectKey = subjectKey;
+            _expandedNodes.Add(subjectKey);
+            OnAddChapterClicked(null!, null!);
+        }
+
+        private void AddTopicToChapter(string subjectKey, string chapterKey)
+        {
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = chapterKey;
+            _expandedNodes.Add(subjectKey);
+            _expandedNodes.Add($"{subjectKey}/{chapterKey}");
+            OnAddTopicClicked(null!, null!);
+        }
+
+        private void DeleteSubject(string? subjectKey)
+        {
+            if (string.IsNullOrEmpty(subjectKey) || !_tree.ContainsKey(subjectKey)) return;
+
+            _tree.Remove(subjectKey);
+            _expandedNodes.Remove(subjectKey);
+
+            _activeSubjectKey = _tree.Keys.FirstOrDefault();
+            _activeChapterKey = null;
+            _activeTopicKey = null;
+
+            RefreshJsonPreview();
+            if (_activeSubjectKey != null && _tree.TryGetValue(_activeSubjectKey, out var nextSubj))
+            {
+                ShowSubjectPanel(_activeSubjectKey, nextSubj);
+            }
+            else
+            {
+                ShowGeneralPanel("Root Overview");
+            }
+            ShowStatus("Subject deleted.", InfoBarSeverity.Informational);
+        }
+
+        private void DeleteChapter(string? subjectKey, string? chapterKey)
+        {
+            if (string.IsNullOrEmpty(subjectKey) || string.IsNullOrEmpty(chapterKey)) return;
+            if (!_tree.TryGetValue(subjectKey, out var subject) || subject.Chapters == null) return;
+
+            subject.Chapters.Remove(chapterKey);
+            _expandedNodes.Remove($"{subjectKey}/{chapterKey}");
+
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = null;
+            _activeTopicKey = null;
+
+            RefreshJsonPreview();
+            ShowSubjectPanel(subjectKey, subject);
+            ShowStatus("Chapter deleted.", InfoBarSeverity.Informational);
+        }
+
+        private void DeleteTopic(string? subjectKey, string? chapterKey, string? topicKey)
+        {
+            if (string.IsNullOrEmpty(subjectKey) || string.IsNullOrEmpty(chapterKey) || string.IsNullOrEmpty(topicKey)) return;
+            if (!_tree.TryGetValue(subjectKey, out var subject) || subject.Chapters == null) return;
+            if (!subject.Chapters.TryGetValue(chapterKey, out var chapter) || chapter.Topics == null) return;
+
+            chapter.Topics.Remove(topicKey);
+            _expandedNodes.Remove($"{subjectKey}/{chapterKey}/{topicKey}");
+
+            _activeSubjectKey = subjectKey;
+            _activeChapterKey = chapterKey;
+            _activeTopicKey = null;
+
+            RefreshJsonPreview();
+            ShowChapterPanel(subjectKey, chapterKey, chapter);
+            ShowStatus("Topic deleted.", InfoBarSeverity.Informational);
         }
 
         #endregion

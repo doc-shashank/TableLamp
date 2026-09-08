@@ -22,7 +22,7 @@
                     </Border>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Preset Tag Generator &amp; Tree Editor" FontSize="16" FontWeight="Bold" />
-                        <TextBlock Text="Dev Tools (v0.0.5.4)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Dev Tools (v0.0.6.0)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -201,11 +201,34 @@
                     CornerRadius="12"
                     Padding="16">
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <!-- Top Bar: Navigation Buttons (Previous & Next Element) -->
+                    <!-- Top Bar: Preview Title, Mode Switch Button, and Navigation Buttons -->
                     <Grid Grid.Row="0" Margin="0,0,0,8" ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE943;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <TextBlock Text="JSON Preview" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="Preview" FontWeight="SemiBold" FontSize="13" />
+
+                            <!-- Mode Switch Button beside Preview Header -->
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="2">
+                                <StackPanel Orientation="Horizontal" Spacing="2">
+                                    <Button x:Name="SimplifiedModeButton"
+                                            Content="Simplified"
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            Padding="8,3"
+                                            FontSize="11"
+                                            CornerRadius="4" />
+                                    <Button x:Name="JsonModeButton"
+                                            Content="JSON"
+                                            Style="{ThemeResource SubtleButtonStyle}"
+                                            Padding="8,3"
+                                            FontSize="11"
+                                            CornerRadius="4" />
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock x:Name="ActiveFileBadgeText" Text="(Unsaved File)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                         </StackPanel>
 
@@ -233,9 +256,10 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Active Line Highlight Bar (Highlights active line without selecting the whole text) -->
+                    <!-- Active Line Highlight Bar (JSON Mode Only) -->
                     <Border Grid.Row="1"
                             x:Name="ActiveLineIndicatorBorder"
+                            Visibility="Collapsed"
                             Background="{ThemeResource LayerFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                             BorderThickness="2,0,0,0"
@@ -248,9 +272,19 @@
                         </Grid>
                     </Border>
 
-                    <!-- JSON Editor Textarea -->
+                    <!-- View Mode 1: Simplified Interactive Tree View -->
+                    <ScrollViewer x:Name="SimplifiedTreeScrollViewer"
+                                  Grid.Row="1"
+                                  Grid.RowSpan="2"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="SimplifiedTreeContainer" Spacing="4" Margin="4,4,4,16" />
+                    </ScrollViewer>
+
+                    <!-- View Mode 2: JSON Editor Textarea -->
                     <TextBox x:Name="JsonPreviewBox"
                              Grid.Row="2"
+                             Visibility="Collapsed"
                              AcceptsReturn="True"
                              IsSpellCheckEnabled="False"
                              FontFamily="Consolas, Cascadia Code, Courier New"
@@ -328,16 +362,30 @@
                                 <TextBox x:Name="SubjectEditionBox" PlaceholderText="e.g. 7th" />
                             </StackPanel>
 
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                                <Button x:Name="DeleteSubjectButton"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        ToolTipService.ToolTip="Delete this Subject"
+                                        Padding="10,6"
+                                        Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                        <TextBlock Text="Delete" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+
                                 <Button x:Name="UpdateSubjectButton"
                                         Content="Apply Changes"
                                         Style="{ThemeResource DefaultButtonStyle}"
-                                        Grid.Column="0" />
+                                        Grid.Column="1"
+                                        Margin="8,0"
+                                        HorizontalAlignment="Stretch" />
 
                                 <Button x:Name="AddChapterButton"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Padding="14,8"
-                                        Grid.Column="1">
+                                        Grid.Column="2">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="12" />
                                         <TextBlock Text="Add New Chapter" FontWeight="SemiBold" />
@@ -367,6 +415,12 @@
                                 </Button>
                             </StackPanel>
 
+                            <!-- Chapter Identifier (Read-only, according to number of elements) -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Chapter Identifier" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBox x:Name="ChapterKeyBox" IsReadOnly="True" />
+                            </StackPanel>
+
                             <!-- Chapter Number (Integer only, serialized as chapter[x]) -->
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Chapter Number (appends to JSON as 'chapter[x]')" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -382,16 +436,30 @@
                                 <TextBox x:Name="ChapterNameBox" PlaceholderText="e.g. Cell Injury, Inflammation" />
                             </StackPanel>
 
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                                <Button x:Name="DeleteChapterButton"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        ToolTipService.ToolTip="Delete this Chapter"
+                                        Padding="10,6"
+                                        Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                        <TextBlock Text="Delete" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+
                                 <Button x:Name="UpdateChapterButton"
                                         Content="Apply Changes"
                                         Style="{ThemeResource DefaultButtonStyle}"
-                                        Grid.Column="0" />
+                                        Grid.Column="1"
+                                        Margin="8,0"
+                                        HorizontalAlignment="Stretch" />
 
                                 <Button x:Name="AddTopicFromChapterButton"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Padding="14,8"
-                                        Grid.Column="1">
+                                        Grid.Column="2">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="12" />
                                         <TextBlock Text="Add New Topic" FontWeight="SemiBold" />
@@ -435,17 +503,31 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                                <Button x:Name="DeleteTopicButton"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        ToolTipService.ToolTip="Delete this Topic"
+                                        Padding="10,6"
+                                        Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                        <TextBlock Text="Delete" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+
                                 <Button x:Name="UpdateTopicButton"
                                         Content="Apply Changes"
                                         Style="{ThemeResource DefaultButtonStyle}"
-                                        Grid.Column="0" />
+                                        Grid.Column="1"
+                                        Margin="8,0"
+                                        HorizontalAlignment="Stretch" />
 
                                 <!-- Retained Add Topic Button -->
                                 <Button x:Name="AddTopicButton"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Padding="14,8"
-                                        Grid.Column="1">
+                                        Grid.Column="2">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE710;" FontSize="12" />
                                         <TextBlock Text="Add Topic" FontWeight="SemiBold" />

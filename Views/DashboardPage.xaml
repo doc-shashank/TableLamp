@@ -8,16 +8,77 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="900" HorizontalAlignment="Center" Spacing="32" Margin="32,36,32,48">
-            <!-- Two Centralized CardButtons -->
-            <Grid ColumnSpacing="24" HorizontalAlignment="Center">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <!-- 2-Column Dashboard: Left: Recent Sessions, Right: Action Buttons in their place -->
+        <Grid ColumnDefinitions="360,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1180" HorizontalAlignment="Center">
+            <!-- 1. Left Column: Recent Sessions Section -->
+            <StackPanel Grid.Column="0" Spacing="16">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE81C;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
+                    </StackPanel>
+
+                    <Button x:Name="ViewAllSessionsButton"
+                            Grid.Column="1"
+                            Content="View All"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Padding="10,4"
+                            FontSize="12" />
+                </Grid>
+
+                <!-- Recent Sessions ItemsControl -->
+                <ItemsControl x:Name="RecentSessionsItemsControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,10"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="14,12"
+                                    Tapped="OnRecentSessionTapped"
+                                    Tag="{Binding}">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <!-- Icon -->
+                                    <Border Grid.Column="0"
+                                            Width="36"
+                                            Height="36"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            Margin="0,0,12,0"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8EC;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <!-- Session Details -->
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayTitle}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding FormattedDate}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="{Binding QuestionCount}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="q" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Arrow Icon -->
+                                    <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- 2. Right Column: New Session & Review Session Buttons (Maintained in their place) -->
+            <Grid Grid.Column="1" ColumnSpacing="24" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="340" />
                     <ColumnDefinition Width="340" />
                 </Grid.ColumnDefinitions>
 
-                <!-- CardButton 1: Create a New Session -->
+                <!-- CardButton 1: Create a New Session (Extends vertically downwards upon click) -->
                 <Border x:Name="CreateSessionCardButton"
                         Grid.Column="0"
                         Height="250"
@@ -25,9 +86,9 @@
                         BorderThickness="1.5"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Padding="26"
+                        Padding="24"
                         IsHitTestVisible="True">
-                    <Grid RowDefinitions="Auto,*,Auto">
+                    <Grid RowDefinitions="Auto,*,Auto,Auto">
                         <Border Grid.Row="0"
                                 Width="54"
                                 Height="54"
@@ -37,7 +98,7 @@
                             <FontIcon Glyph="&#xE710;" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,16,0,12">
+                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
                             <TextBlock Text="Create a New Session"
                                        FontSize="21"
                                        FontWeight="Bold" />
@@ -47,9 +108,51 @@
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
 
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                        <!-- Get Started Indicator (Collapsed when extended) -->
+                        <StackPanel x:Name="GetStartedIndicator" Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
                             <TextBlock Text="Get Started" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Extension Options: Curated and Custom separated by a separator -->
+                        <StackPanel x:Name="CreateSessionOptionsPanel"
+                                    Grid.Row="3"
+                                    Visibility="Collapsed"
+                                    Opacity="0"
+                                    Margin="0,10,0,0">
+                            <!-- Separator line -->
+                            <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,0,0,12" />
+
+                            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
+                                <!-- Curated Option -->
+                                <Button x:Name="CuratedOptionButton"
+                                        Grid.Column="0"
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="10,8"
+                                        CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xE735;" FontSize="12" />
+                                        <TextBlock Text="Curated" FontWeight="SemiBold" FontSize="13" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Vertical Separator -->
+                                <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="2,2" />
+
+                                <!-- Custom Option -->
+                                <Button x:Name="CustomOptionButton"
+                                        Grid.Column="2"
+                                        Style="{ThemeResource DefaultButtonStyle}"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="10,8"
+                                        CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xE70F;" FontSize="12" />
+                                        <TextBlock Text="Custom" FontWeight="SemiBold" FontSize="13" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -62,7 +165,7 @@
                         BorderThickness="1.5"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Padding="26"
+                        Padding="24"
                         IsHitTestVisible="True">
                     <Grid RowDefinitions="Auto,*,Auto">
                         <Border Grid.Row="0"
@@ -76,7 +179,7 @@
                             <FontIcon Glyph="&#xE768;" FontSize="22" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,16,0,12">
+                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
                             <TextBlock Text="Review Session"
                                        FontSize="21"
                                        FontWeight="Bold" />
@@ -93,68 +196,6 @@
                     </Grid>
                 </Border>
             </Grid>
-
-            <!-- Section Below: Recent Sessions -->
-            <StackPanel Spacing="16">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE81C;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
-                    </StackPanel>
-
-                    <Button x:Name="ViewAllSessionsButton"
-                            Grid.Column="1"
-                            Content="View All Sessions"
-                            Style="{ThemeResource SubtleButtonStyle}"
-                            Padding="12,6" />
-                </Grid>
-
-                <!-- Recent Sessions ItemsControl -->
-                <ItemsControl x:Name="RecentSessionsItemsControl">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="0,0,0,10"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="18,14"
-                                    Tapped="OnRecentSessionTapped"
-                                    Tag="{Binding}">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <!-- Icon -->
-                                    <Border Grid.Column="0"
-                                            Width="40"
-                                            Height="40"
-                                            CornerRadius="10"
-                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                            Margin="0,0,14,0"
-                                            VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8EC;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Border>
-
-                                    <!-- Session Details -->
-                                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DisplayTitle}" FontSize="15" FontWeight="SemiBold" />
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding FormattedDate}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{Binding QuestionCount}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="question(s)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <!-- Arrow Icon -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <TextBlock Text="Open" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </StackPanel>
+        </Grid>
     </ScrollViewer>
 </Page>

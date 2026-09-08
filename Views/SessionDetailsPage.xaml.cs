@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -15,12 +14,7 @@ namespace TableLamp.Views
     {
         private List<PresetSearchResult> _matchingResults = new();
         private int _selectedSessionType = 0; // 0 = self-session, 1 = class-session
-
-        // Custom tag fields when subject is not a curated preset
-        private int _customChapterNumber = 1;
-        private string? _customChapterName;
-        private string? _customTopicName;
-        private string? _customPageRange;
+        private string _sessionMode = "Curated"; // "Curated" or "Custom"
 
         public SessionDetailsPage()
         {
@@ -31,13 +25,87 @@ namespace TableLamp.Views
 
             BackButton.Click += (s, e) => NavigateBack();
             CancelButton.Click += (s, e) => NavigateBack();
-            NextButton.Click += OnNextClicked;
+            NextButton.Click += OnStartClicked;
             SearchPresetButton.Click += OnSearchPresetClicked;
-            OpenCustomTagPopupButton.Click += async (s, e) => await OpenCustomTagPopupAsync();
+
+            OpenDevToolsButton.Click += (s, e) =>
+            {
+                var devWindow = DevToolsWindow.GetOrCreateInstance();
+                devWindow.Activate();
+            };
 
             SubjectBox.TextChanged += (s, e) => OnSubjectTextChanged();
+            SubjectRecommendationButton.Click += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(SubjectRecommendationText.Text))
+                {
+                    SubjectBox.Text = SubjectRecommendationText.Text;
+                    SubjectBox.SelectionStart = SubjectBox.Text.Length;
+                }
+            };
 
-            // Initial subject validation state
+            SetSessionType(0);
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            if (e.Parameter is string mode && mode.Equals("Custom", StringComparison.OrdinalIgnoreCase))
+            {
+                _sessionMode = "Custom";
+            }
+            else
+            {
+                _sessionMode = "Curated";
+            }
+
+            ApplySessionModeUI();
+        }
+
+        private void ApplySessionModeUI()
+        {
+            if (_sessionMode == "Curated")
+            {
+                HeaderModeBadgeText.Text = "Curated";
+                if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush b)
+                {
+                    HeaderModeBadgeBorder.Background = b;
+                }
+                HeaderModeBadgeText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.White);
+                HeaderModeBadgeBorder.BorderThickness = new Thickness(0);
+
+                PageRangeCard.Opacity = 1.0;
+                PageRangeHintText.Text = "(Enabled for Curated Subjects)";
+                CustomTagInfoCard.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                HeaderModeBadgeText.Text = "Custom";
+                if (Application.Current.Resources.TryGetValue("LayerFillColorDefaultBrush", out object? layer) && layer is Brush lb)
+                {
+                    HeaderModeBadgeBorder.Background = lb;
+                }
+                if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush sb)
+                {
+                    HeaderModeBadgeBorder.BorderBrush = sb;
+                }
+                HeaderModeBadgeBorder.BorderThickness = new Thickness(1);
+                if (Application.Current.Resources.TryGetValue("TextFillColorPrimaryBrush", out object? txt) && txt is Brush tb)
+                {
+                    HeaderModeBadgeText.Foreground = tb;
+                }
+
+                PageRangeCard.Opacity = 0.55;
+                StartPageBox.IsEnabled = false;
+                EndPageBox.IsEnabled = false;
+                SearchPresetButton.IsEnabled = false;
+                PageRangeHintText.Text = "(Disabled in Custom Mode)";
+                CustomTagInfoCard.Visibility = Visibility.Visible;
+                CustomInfoTitleText.Text = "Custom Tag Mode Active";
+                CustomInfoSubtitleText.Text = "Custom tag mode allows any subject name, but chapter and topic fields cannot be filled directly. Please update the App's database with custom tag JSONs via DevTools to assign preset chapters and topics.";
+            }
+
             OnSubjectTextChanged();
         }
 
@@ -49,13 +117,13 @@ namespace TableLamp.Views
             {
                 SelfSessionButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
                 ClassSessionButton.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
-                NewSessionHeaderSubtext.Text = "Self-directed study session. Enter session metadata or use preset page search to auto-fill details.";
+                NewSessionHeaderSubtext.Text = "Sessions created for self-study";
             }
             else
             {
                 SelfSessionButton.Style = (Style)Application.Current.Resources["SubtleButtonStyle"];
                 ClassSessionButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
-                NewSessionHeaderSubtext.Text = "Lecture or classroom study session. Enter session metadata or use preset page search to auto-fill details.";
+                NewSessionHeaderSubtext.Text = "Sessions based on notes from classrooms/lectures.";
             }
         }
 
@@ -64,192 +132,217 @@ namespace TableLamp.Views
             string typedSubject = SubjectBox.Text.Trim();
             bool isCurated = CustomTagService.Instance.IsCuratedSubject(typedSubject);
 
-            // Make editing the page range text only possible if the subject is a valid curated Subject
-            StartPageBox.IsEnabled = isCurated;
-            EndPageBox.IsEnabled = isCurated;
-            SearchPresetButton.IsEnabled = isCurated;
+            // In Curated Mode: page range is enabled only if typed subject is in curated database
+            if (_sessionMode == "Curated")
+            {
+                StartPageBox.IsEnabled = isCurated;
+                EndPageBox.IsEnabled = isCurated;
+                SearchPresetButton.IsEnabled = isCurated;
 
-            if (!string.IsNullOrWhiteSpace(typedSubject) && !isCurated)
-            {
-                CustomTagInfoCard.Visibility = Visibility.Visible;
-                SubjectBadgeBorder.Visibility = Visibility.Visible;
-                SubjectStatusBadge.Text = "Custom Subject";
-                if (Application.Current.Resources.TryGetValue("SystemFillColorCautionBrush", out object? caution) && caution is Brush b)
+                if (!string.IsNullOrWhiteSpace(typedSubject))
                 {
-                    SubjectStatusBadge.Foreground = b;
+                    SubjectBadgeBorder.Visibility = Visibility.Visible;
+                    if (isCurated)
+                    {
+                        SubjectStatusBadge.Text = "Curated Preset";
+                        if (Application.Current.Resources.TryGetValue("AccentTextFillColorPrimaryBrush", out object? accent) && accent is Brush b)
+                        {
+                            SubjectStatusBadge.Foreground = b;
+                        }
+                    }
+                    else
+                    {
+                        SubjectStatusBadge.Text = "Not in Presets";
+                        if (Application.Current.Resources.TryGetValue("SystemFillColorCautionBrush", out object? caution) && caution is Brush cb)
+                        {
+                            SubjectStatusBadge.Foreground = cb;
+                        }
+                    }
                 }
-            }
-            else if (isCurated)
-            {
-                CustomTagInfoCard.Visibility = Visibility.Collapsed;
-                SubjectBadgeBorder.Visibility = Visibility.Visible;
-                SubjectStatusBadge.Text = "Curated Preset";
-                if (Application.Current.Resources.TryGetValue("AccentTextFillColorPrimaryBrush", out object? accent) && accent is Brush b)
+                else
                 {
-                    SubjectStatusBadge.Foreground = b;
+                    SubjectBadgeBorder.Visibility = Visibility.Collapsed;
                 }
             }
             else
             {
-                CustomTagInfoCard.Visibility = Visibility.Collapsed;
-                SubjectBadgeBorder.Visibility = Visibility.Collapsed;
+                // In Custom Mode: page range is disabled
+                StartPageBox.IsEnabled = false;
+                EndPageBox.IsEnabled = false;
+                SearchPresetButton.IsEnabled = false;
+
+                if (!string.IsNullOrWhiteSpace(typedSubject))
+                {
+                    SubjectBadgeBorder.Visibility = Visibility.Visible;
+                    SubjectStatusBadge.Text = "Custom Subject";
+                    if (Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out object? sec) && sec is Brush sb)
+                    {
+                        SubjectStatusBadge.Foreground = sb;
+                    }
+                }
+                else
+                {
+                    SubjectBadgeBorder.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            // Subject Recommendation (Closest match from curated presets)
+            UpdateSubjectRecommendation(typedSubject);
+        }
+
+        private void UpdateSubjectRecommendation(string typedSubject)
+        {
+            if (string.IsNullOrWhiteSpace(typedSubject))
+            {
+                SubjectRecommendationPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var tree = PresetTagDatabase.Instance.GetTree();
+            if (tree == null || tree.Count == 0)
+            {
+                SubjectRecommendationPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Gather all candidate names
+            var candidates = new List<string>();
+            foreach (var kvp in tree)
+            {
+                if (!candidates.Contains(kvp.Key)) candidates.Add(kvp.Key);
+                if (!string.IsNullOrWhiteSpace(kvp.Value.short_name) && !candidates.Contains(kvp.Value.short_name))
+                    candidates.Add(kvp.Value.short_name);
+            }
+
+            // Exact match already?
+            if (candidates.Any(c => string.Equals(c, typedSubject, StringComparison.OrdinalIgnoreCase)))
+            {
+                SubjectRecommendationPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Find closest match (Prefix match, contains match, or best distance)
+            string? closest = candidates.FirstOrDefault(c => c.StartsWith(typedSubject, StringComparison.OrdinalIgnoreCase))
+                           ?? candidates.FirstOrDefault(c => c.IndexOf(typedSubject, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (closest == null)
+            {
+                // Distance based match
+                int bestDist = int.MaxValue;
+                foreach (var c in candidates)
+                {
+                    int d = ComputeLevenshteinDistance(typedSubject.ToLowerInvariant(), c.ToLowerInvariant());
+                    if (d < bestDist && d <= Math.Max(3, typedSubject.Length))
+                    {
+                        bestDist = d;
+                        closest = c;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(closest))
+            {
+                SubjectRecommendationText.Text = closest;
+                SubjectRecommendationPanel.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                SubjectRecommendationPanel.Visibility = Visibility.Collapsed;
             }
         }
 
-        private async Task OpenCustomTagPopupAsync()
+        private static int ComputeLevenshteinDistance(string s, string t)
         {
-            var dialog = new ContentDialog
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+
+            if (n == 0) return m;
+            if (m == 0) return n;
+
+            for (int i = 0; i <= n; d[i, 0] = i++) { }
+            for (int j = 0; j <= m; d[0, j] = j++) { }
+
+            for (int i = 1; i <= n; i++)
             {
-                Title = "Fill Custom Session Details",
-                PrimaryButtonText = "Apply",
-                CloseButtonText = "Cancel",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = this.XamlRoot
-            };
-
-            var stack = new StackPanel { Spacing = 14, Width = 380 };
-
-            var chNumBox = new NumberBox
-            {
-                Header = "Chapter Number",
-                Value = _customChapterNumber > 0 ? _customChapterNumber : 1,
-                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 1,
-                SmallChange = 1
-            };
-
-            var chNameBox = new TextBox
-            {
-                Header = "Chapter Name *",
-                PlaceholderText = "e.g. Mechanics, Thermodynamics",
-                Text = _customChapterName ?? ""
-            };
-
-            var topicBox = new TextBox
-            {
-                Header = "Topic Name (Optional)",
-                PlaceholderText = "e.g. Kinetic Energy, Work Theorem",
-                Text = _customTopicName ?? ""
-            };
-
-            var pageRangeBox = new TextBox
-            {
-                Header = "Page Range (Optional)",
-                PlaceholderText = "e.g. 15-30",
-                Text = _customPageRange ?? ""
-            };
-
-            stack.Children.Add(chNumBox);
-            stack.Children.Add(chNameBox);
-            stack.Children.Add(topicBox);
-            stack.Children.Add(pageRangeBox);
-
-            dialog.Content = stack;
-
-            var result = await dialog.ShowAsync();
-            if (result == ContentDialogResult.Primary)
-            {
-                string chName = chNameBox.Text.Trim();
-                if (string.IsNullOrWhiteSpace(chName))
+                for (int j = 1; j <= m; j++)
                 {
-                    NotificationCard.Show("Chapter Name cannot be empty.", InfoBarSeverity.Warning, "Chapter Required");
-                    return;
+                    int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost);
                 }
-
-                _customChapterNumber = double.IsNaN(chNumBox.Value) ? 1 : (int)chNumBox.Value;
-                _customChapterName = chName;
-                _customTopicName = string.IsNullOrWhiteSpace(topicBox.Text) ? null : topicBox.Text.Trim();
-                _customPageRange = string.IsNullOrWhiteSpace(pageRangeBox.Text) ? null : pageRangeBox.Text.Trim();
-
-                // Clear any preset results since user specified custom details
-                _matchingResults.Clear();
-
-                ChapterLabelText.Text = $"Ch.{_customChapterNumber}: {_customChapterName}";
-                TopicLabelText.Text = string.IsNullOrWhiteSpace(_customTopicName) ? "(None)" : _customTopicName;
-                MatchedSummaryBadgeText.Text = "(Custom Tag Defined)";
-                MatchedSummaryBadgeText.Visibility = Visibility.Visible;
-
-                NotificationCard.Show("Custom session details configured successfully.", InfoBarSeverity.Success, "Details Configured");
             }
+            return d[n, m];
         }
 
         private void OnSearchPresetClicked(object sender, RoutedEventArgs e)
         {
-            string typedSubject = SubjectBox.Text.Trim();
-            if (!CustomTagService.Instance.IsCuratedSubject(typedSubject))
+            string subject = SubjectBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(subject))
             {
-                NotificationCard.Show("Preset page lookup requires a valid curated subject.", InfoBarSeverity.Warning, "Curated Subject Required");
+                NotificationCard.Show("Please enter a Subject Name first.", InfoBarSeverity.Warning, "Subject Required");
+                SubjectBox.Focus(FocusState.Programmatic);
                 return;
             }
 
-            int startPage = double.IsNaN(StartPageBox.Value) ? 0 : (int)StartPageBox.Value;
-            int endPage = double.IsNaN(EndPageBox.Value) ? startPage : (int)EndPageBox.Value;
-
-            if (startPage <= 0)
+            if (!CustomTagService.Instance.IsCuratedSubject(subject))
             {
-                NotificationCard.Show("Please enter a valid start page number (1 or greater).", InfoBarSeverity.Warning, "Invalid Page Range");
+                NotificationCard.Show("Page Range search is only available for Curated Subjects. Please enter a valid curated subject name.", InfoBarSeverity.Error, "Curated Subject Required");
                 return;
             }
 
-            if (endPage < startPage)
+            int? startPage = double.IsNaN(StartPageBox.Value) ? null : (int)StartPageBox.Value;
+            int? endPage = double.IsNaN(EndPageBox.Value) ? null : (int)EndPageBox.Value;
+
+            if (startPage == null && endPage == null)
             {
-                endPage = startPage;
-                EndPageBox.Value = endPage;
+                NotificationCard.Show("Please enter at least a Start Page or End Page to search presets.", InfoBarSeverity.Warning, "Page Number Required");
+                StartPageBox.Focus(FocusState.Programmatic);
+                return;
             }
 
-            var results = PresetTagDatabase.Instance.Search(startPage, endPage);
-            if (results != null && results.Count > 0)
+            int sStart = startPage ?? endPage ?? 0;
+            int sEnd = endPage ?? startPage ?? 0;
+            var allResults = PresetTagDatabase.Instance.Search(sStart, sEnd);
+            _matchingResults = allResults.Where(r =>
+                string.Equals(r.SubjectKey, subject, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r.SubjectShortName, subject, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r.BookFullName, subject, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            if (_matchingResults.Count == 0)
             {
-                // Prioritize results belonging to typed curated subject
-                var subjResults = results.Where(r =>
-                    string.Equals(r.SubjectShortName, typedSubject, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(r.SubjectKey, typedSubject, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                _matchingResults = subjResults.Count > 0 ? subjResults : results;
-
-                // Clear any custom tags
-                _customChapterName = null;
-                _customTopicName = null;
-
-                // Display all matched chapters and topics as labels
-                var chapterSummaries = _matchingResults
-                    .Select(r => r.ChapterNumber > 0 ? $"Ch.{r.ChapterNumber}: {r.ChapterName}" : r.ChapterName)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct()
-                    .ToList();
-
-                ChapterLabelText.Text = chapterSummaries.Count > 0 ? string.Join(", ", chapterSummaries) : "General";
-
-                var topicSummaries = _matchingResults
-                    .Select(r => r.TopicName)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct()
-                    .ToList();
-
-                TopicLabelText.Text = topicSummaries.Count > 0 ? string.Join(", ", topicSummaries) : "(No specific topics)";
-
-                MatchedSummaryBadgeText.Text = $"{_matchingResults.Count} topic/chapter match(es) will be assigned to this session bundle";
-                MatchedSummaryBadgeText.Visibility = Visibility.Visible;
-
-                NotificationCard.Show($"Matched {_matchingResults.Count} topic/chapter preset(s) for pp. {startPage}-{endPage}. All will be added to the session bundle.", InfoBarSeverity.Success, "Presets Matched");
-            }
-            else
-            {
-                _matchingResults.Clear();
-                ChapterLabelText.Text = "None selected";
-                TopicLabelText.Text = "None selected";
+                ChapterLabelText.Text = "None matched";
+                TopicLabelText.Text = "None matched";
                 MatchedSummaryBadgeText.Visibility = Visibility.Collapsed;
-
-                NotificationCard.Show($"Could not find any preset matching page range {startPage} - {endPage}.", InfoBarSeverity.Warning, "Not Found");
+                NotificationCard.Show($"No curated preset topics found for {subject} within pages {startPage}-{endPage}.", InfoBarSeverity.Warning, "No Matches Found");
+                return;
             }
+
+            // Display all matched chapters and topics
+            var distinctChapters = _matchingResults.Select(r => r.ChapterNumber > 0 ? $"Ch.{r.ChapterNumber}: {r.ChapterName}" : r.ChapterName)
+                                                   .Distinct()
+                                                   .ToList();
+            var distinctTopics = _matchingResults.Select(r => r.TopicName)
+                                                 .Distinct()
+                                                 .ToList();
+
+            ChapterLabelText.Text = string.Join(", ", distinctChapters);
+            TopicLabelText.Text = string.Join(", ", distinctTopics);
+
+            MatchedSummaryBadgeText.Text = $"Matched {_matchingResults.Count} preset topic(s) across {distinctChapters.Count} chapter(s)";
+            MatchedSummaryBadgeText.Visibility = Visibility.Visible;
+
+            NotificationCard.Show($"Found {_matchingResults.Count} preset configuration(s). All matched chapters and topics are assigned.", InfoBarSeverity.Success, "Preset Matched");
         }
 
-        private void OnNextClicked(object sender, RoutedEventArgs e)
+        private void OnStartClicked(object sender, RoutedEventArgs e)
         {
             string sessionName = SessionNameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(sessionName))
             {
-                NotificationCard.Show("Session Name cannot be empty. Please enter a Session Name.", InfoBarSeverity.Warning, "Session Name Required");
+                NotificationCard.Show("Please enter a Session Name.", InfoBarSeverity.Error, "Session Name Required");
                 SessionNameBox.Focus(FocusState.Programmatic);
                 return;
             }
@@ -257,25 +350,51 @@ namespace TableLamp.Views
             string subject = SubjectBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(subject))
             {
-                NotificationCard.Show("Please provide a Subject name.", InfoBarSeverity.Warning, "Subject Required");
+                NotificationCard.Show("Please enter a Subject Name.", InfoBarSeverity.Error, "Subject Required");
                 SubjectBox.Focus(FocusState.Programmatic);
                 return;
             }
 
-            // Case A: Multiple or single curated preset match(es) from search
-            if (_matchingResults != null && _matchingResults.Count > 0)
+            // Mode A: Curated Tags Mode
+            if (_sessionMode == "Curated")
             {
-                var tags = new List<Tag>();
-                foreach (var res in _matchingResults)
+                // Curated tags mode will not allow the user to proceed if the Subject field entered does not match any of the curated subjects
+                if (!CustomTagService.Instance.IsCuratedSubject(subject))
                 {
+                    NotificationCard.Show($"In Curated Mode, Subject '{subject}' must match a curated preset subject. Please choose a curated subject or switch to Custom mode.", InfoBarSeverity.Error, "Invalid Curated Subject");
+                    SubjectBox.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                var tags = new List<Tag>();
+                if (_matchingResults != null && _matchingResults.Count > 0)
+                {
+                    int idCounter = 1;
+                    foreach (var res in _matchingResults)
+                    {
+                        tags.Add(new Tag
+                        {
+                            id = idCounter++,
+                            subject_name = string.IsNullOrWhiteSpace(res.SubjectShortName) ? subject : res.SubjectShortName,
+                            chapter_number = res.ChapterNumber,
+                            chapter_name = res.ChapterName,
+                            topic_name = res.TopicName,
+                            book_name = res.BookFullName,
+                            page_range = res.PageRangeString,
+                            session_type = _selectedSessionType
+                        });
+                    }
+                }
+                else
+                {
+                    // Fallback to primary subject tag if page range was not specifically queried
                     tags.Add(new Tag
                     {
-                        subject_name = string.IsNullOrWhiteSpace(res.SubjectShortName) ? subject : res.SubjectShortName,
-                        chapter_number = res.ChapterNumber,
-                        chapter_name = res.ChapterName,
-                        topic_name = res.TopicName,
-                        book_name = res.BookFullName,
-                        page_range = res.PageRangeString,
+                        id = 1,
+                        subject_name = subject,
+                        chapter_number = 1,
+                        chapter_name = "General",
+                        topic_name = "General",
                         session_type = _selectedSessionType
                     });
                 }
@@ -287,49 +406,30 @@ namespace TableLamp.Views
                 return;
             }
 
-            // Case B: Custom tag details filled via popup
-            if (!string.IsNullOrWhiteSpace(_customChapterName))
+            // Mode B: Custom Tag Mode
+            // Custom tag mode has no subject restriction, but does not allow filling chapter and topic fields
+            var customTag = new Tag
             {
-                var customTag = new Tag
-                {
-                    subject_name = subject,
-                    chapter_number = _customChapterNumber,
-                    chapter_name = _customChapterName,
-                    topic_name = _customTopicName,
-                    book_name = null,
-                    page_range = _customPageRange,
-                    session_type = _selectedSessionType
-                };
+                id = 1,
+                subject_name = subject,
+                chapter_number = 0,
+                chapter_name = "Custom",
+                topic_name = "Custom",
+                session_type = _selectedSessionType
+            };
 
-                // Validate custom tag
-                if (!CustomTagService.Instance.ValidateAndSaveCustomTag(customTag, out string? customError))
-                {
-                    NotificationCard.Show(customError ?? "A custom tag cannot use a Subject that matches any curated preset subject.", InfoBarSeverity.Error, "Curated Subject Conflict");
-                    SubjectBox.Focus(FocusState.Programmatic);
-                    return;
-                }
-
-                var session = new BasicSessionBundle(null, isCurated: false, nextReviewDate: DateTime.UtcNow.AddDays(3), sessionName: sessionName, tag: customTag, tags: new[] { customTag });
-                SessionService.Instance.SaveSession(session);
-                NotificationCard.Dismiss();
-                Frame.Navigate(typeof(EditCanvasPage), session);
-                return;
-            }
-
-            // Case C: Neither preset searched nor custom tag filled
-            NotificationCard.Show("Please search a preset page range or click 'Fill Session Details' to configure custom chapter/topic metadata.", InfoBarSeverity.Warning, "Details Needed");
+            var customSession = new BasicSessionBundle(null, isCurated: false, nextReviewDate: DateTime.UtcNow.AddDays(3), sessionName: sessionName, tag: customTag, tags: new[] { customTag });
+            SessionService.Instance.SaveSession(customSession);
+            NotificationCard.Dismiss();
+            Frame.Navigate(typeof(EditCanvasPage), customSession);
         }
 
         private void NavigateBack()
         {
             if (Frame.CanGoBack)
-            {
                 Frame.GoBack();
-            }
             else
-            {
                 Frame.Navigate(typeof(DashboardPage));
-            }
         }
     }
 }

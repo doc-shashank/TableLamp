@@ -11,7 +11,7 @@
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="860" HorizontalAlignment="Center" Spacing="24" Margin="32,24,32,48">
-                <!-- Header with Session Type Toggle on the Side -->
+                <!-- Header with Session Mode Badge and Session Type Toggle on the Side -->
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -29,9 +29,18 @@
                                 <TextBlock Text="Back to Dashboard" FontSize="13" />
                             </StackPanel>
                         </Button>
-                        <TextBlock Text="Create a New Session" FontSize="26" FontWeight="Bold" />
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <TextBlock Text="Create a New Session" FontSize="26" FontWeight="Bold" />
+                            <Border x:Name="HeaderModeBadgeBorder"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="6"
+                                    Padding="8,3"
+                                    VerticalAlignment="Center">
+                                <TextBlock x:Name="HeaderModeBadgeText" Text="Curated" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                            </Border>
+                        </StackPanel>
                         <TextBlock x:Name="NewSessionHeaderSubtext"
-                                   Text="Self-directed study session. Enter session metadata or use preset page search to auto-fill details."
+                                   Text="Sessions created for self-study"
                                    FontSize="14"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -84,7 +93,7 @@
                             <TextBox x:Name="SessionNameBox" PlaceholderText="e.g. Morning Study - Cell Biology" />
                         </StackPanel>
 
-                        <!-- 2. Subject Name Field (Moved ABOVE Page Range) -->
+                        <!-- 2. Subject Name Field (Above Page Range) with Closest Match Recommendation -->
                         <StackPanel Spacing="6">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock Text="Subject Name" FontWeight="SemiBold" FontSize="14" />
@@ -100,10 +109,29 @@
                                 </Border>
                             </StackPanel>
                             <TextBox x:Name="SubjectBox" PlaceholderText="e.g. Robins Physiology, Chemistry, Biology" />
+
+                            <!-- Closest Match Recommendation Hint / Chip -->
+                            <StackPanel x:Name="SubjectRecommendationPanel"
+                                        Orientation="Horizontal"
+                                        Spacing="6"
+                                        Visibility="Collapsed"
+                                        Margin="2,2,0,0">
+                                <TextBlock Text="Closest curated match:" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <Button x:Name="SubjectRecommendationButton"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Padding="6,2"
+                                        CornerRadius="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE735;" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock x:Name="SubjectRecommendationText" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- 3. Preset Page Range Lookup Section -->
-                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        <Border x:Name="PageRangeCard"
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 CornerRadius="10"
@@ -112,7 +140,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                     <FontIcon Glyph="&#xE721;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                     <TextBlock Text="Page Range" FontWeight="SemiBold" FontSize="14" />
-                                    <TextBlock Text="(Enabled for Curated Subjects)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock x:Name="PageRangeHintText" Text="(Enabled for Curated Subjects)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
 
                                 <Grid ColumnSpacing="12">
@@ -169,11 +197,11 @@
                             <StackPanel Spacing="8">
                                 <Grid ColumnDefinitions="Auto,*">
                                     <TextBlock Text="Chapter:" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Width="70" />
-                                    <TextBlock x:Name="ChapterLabelText" Grid.Column="1" Text="None selected" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ChapterLabelText" Grid.Column="1" Text="None" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
                                 </Grid>
                                 <Grid ColumnDefinitions="Auto,*">
                                     <TextBlock Text="Topic(s):" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Width="70" />
-                                    <TextBlock x:Name="TopicLabelText" Grid.Column="1" Text="None selected" FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="TopicLabelText" Grid.Column="1" Text="None" FontSize="13" TextWrapping="Wrap" />
                                 </Grid>
                                 <TextBlock x:Name="MatchedSummaryBadgeText"
                                            FontSize="11"
@@ -184,20 +212,20 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Right: Cancel and Next Action Buttons -->
+                    <!-- Right: Cancel and Start Action Buttons -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Bottom">
                         <Button x:Name="CancelButton"
                                 Content="Cancel"
                                 Style="{ThemeResource DefaultButtonStyle}"
                                 Padding="20,10" />
                         <Button x:Name="NextButton"
-                                Content="Save &amp; Start Session"
+                                Content="Start"
                                 Style="{ThemeResource AccentButtonStyle}"
                                 Padding="28,10" />
                     </StackPanel>
                 </Grid>
 
-                <!-- Information Card below Cancel & Next buttons for Custom Tags -->
+                <!-- Warning/Information Card for Custom Tags Mode -->
                 <Border x:Name="CustomTagInfoCard"
                         Visibility="Collapsed"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -212,18 +240,19 @@
                         </Border>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="Custom Subject Detected" FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="This subject does not match any registered curated database presets. Preset page lookup is disabled. You can individually fill session details for custom tags."
+                            <TextBlock x:Name="CustomInfoTitleText" Text="Custom Tag Mode Active" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock x:Name="CustomInfoSubtitleText"
+                                       Text="Custom tag mode allows any subject name, but chapter and topic fields cannot be filled directly. Please update the App's database with custom tag JSONs via DevTools to assign preset chapters and topics."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
 
-                        <Button x:Name="OpenCustomTagPopupButton"
+                        <Button x:Name="OpenDevToolsButton"
                                 Grid.Column="2"
-                                Content="Fill Session Details"
-                                Style="{ThemeResource AccentButtonStyle}"
-                                Padding="16,8"
+                                Content="Open DevTools"
+                                Style="{ThemeResource SubtleButtonStyle}"
+                                Padding="14,8"
                                 VerticalAlignment="Center" />
                     </Grid>
                 </Border>
