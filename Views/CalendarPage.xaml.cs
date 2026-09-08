@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using TableLamp.Models;
 using TableLamp.Services;
@@ -81,6 +82,36 @@ namespace TableLamp.Views
             if (sender is Button btn && btn.Tag is BasicSessionBundle session)
             {
                 Frame.Navigate(typeof(ViewCanvasPage), session);
+            }
+        }
+
+        private void OnSessionCardPointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
+            }
+        }
+
+        private void OnSessionCardPointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
             }
         }
     }

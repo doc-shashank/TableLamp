@@ -10,7 +10,7 @@
 
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="860" HorizontalAlignment="Center" Spacing="24" Margin="32,24,32,48">
+            <StackPanel Width="1200" MaxWidth="1200" HorizontalAlignment="Center" Spacing="24" Margin="32,24,32,48">
                 <!-- Header with Session Mode Badge and Session Type Toggle on the Side -->
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions>

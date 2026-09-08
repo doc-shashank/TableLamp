@@ -96,14 +96,12 @@ namespace TableLamp.Views
                     HeaderModeBadgeText.Foreground = tb;
                 }
 
-                PageRangeCard.Opacity = 0.55;
-                StartPageBox.IsEnabled = false;
-                EndPageBox.IsEnabled = false;
-                SearchPresetButton.IsEnabled = false;
-                PageRangeHintText.Text = "(Disabled in Custom Mode)";
-                CustomTagInfoCard.Visibility = Visibility.Visible;
-                CustomInfoTitleText.Text = "Custom Tag Mode Active";
-                CustomInfoSubtitleText.Text = "Custom tag mode allows any subject name, but chapter and topic fields cannot be filled directly. Please update the App's database with custom tag JSONs via DevTools to assign preset chapters and topics.";
+                PageRangeCard.Opacity = 1.0;
+                StartPageBox.IsEnabled = true;
+                EndPageBox.IsEnabled = true;
+                SearchPresetButton.IsEnabled = true;
+                PageRangeHintText.Text = "(Available for Custom Presets)";
+                CustomTagInfoCard.Visibility = Visibility.Collapsed;
             }
 
             OnSubjectTextChanged();
@@ -166,10 +164,10 @@ namespace TableLamp.Views
             }
             else
             {
-                // In Custom Mode: page range is disabled
-                StartPageBox.IsEnabled = false;
-                EndPageBox.IsEnabled = false;
-                SearchPresetButton.IsEnabled = false;
+                // In Custom Mode: page range is enabled
+                StartPageBox.IsEnabled = true;
+                EndPageBox.IsEnabled = true;
+                SearchPresetButton.IsEnabled = true;
 
                 if (!string.IsNullOrWhiteSpace(typedSubject))
                 {
@@ -186,7 +184,7 @@ namespace TableLamp.Views
                 }
             }
 
-            // Subject Recommendation (Closest match from curated presets)
+            // Subject Recommendation (Closest match from curated or custom presets)
             UpdateSubjectRecommendation(typedSubject);
         }
 
@@ -198,7 +196,10 @@ namespace TableLamp.Views
                 return;
             }
 
-            var tree = PresetTagDatabase.Instance.GetTree();
+            var tree = _sessionMode == "Curated"
+                ? PresetTagDatabase.Instance.GetTree()
+                : CustomPresetTagDatabase.Instance.GetTree();
+
             if (tree == null || tree.Count == 0)
             {
                 SubjectRecommendationPanel.Visibility = Visibility.Collapsed;
@@ -286,7 +287,7 @@ namespace TableLamp.Views
                 return;
             }
 
-            if (!CustomTagService.Instance.IsCuratedSubject(subject))
+            if (_sessionMode == "Curated" && !CustomTagService.Instance.IsCuratedSubject(subject))
             {
                 NotificationCard.Show("Page Range search is only available for Curated Subjects. Please enter a valid curated subject name.", InfoBarSeverity.Error, "Curated Subject Required");
                 return;
@@ -304,7 +305,10 @@ namespace TableLamp.Views
 
             int sStart = startPage ?? endPage ?? 0;
             int sEnd = endPage ?? startPage ?? 0;
-            var allResults = PresetTagDatabase.Instance.Search(sStart, sEnd);
+            var allResults = _sessionMode == "Curated"
+                ? PresetTagDatabase.Instance.Search(sStart, sEnd)
+                : CustomPresetTagDatabase.Instance.Search(sStart, sEnd);
+
             _matchingResults = allResults.Where(r =>
                 string.Equals(r.SubjectKey, subject, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(r.SubjectShortName, subject, StringComparison.OrdinalIgnoreCase) ||
@@ -316,7 +320,8 @@ namespace TableLamp.Views
                 ChapterLabelText.Text = "None matched";
                 TopicLabelText.Text = "None matched";
                 MatchedSummaryBadgeText.Visibility = Visibility.Collapsed;
-                NotificationCard.Show($"No curated preset topics found for {subject} within pages {startPage}-{endPage}.", InfoBarSeverity.Warning, "No Matches Found");
+                string dbDesc = _sessionMode == "Curated" ? "curated" : "custom";
+                NotificationCard.Show($"No {dbDesc} preset topics found for {subject} within pages {startPage}-{endPage}.", InfoBarSeverity.Warning, "No Matches Found");
                 return;
             }
 
@@ -407,18 +412,40 @@ namespace TableLamp.Views
             }
 
             // Mode B: Custom Tag Mode
-            // Custom tag mode has no subject restriction, but does not allow filling chapter and topic fields
-            var customTag = new Tag
+            // Custom tag mode has no subject restriction; uses custom matched tags if searched, or generic custom tag
+            var customTags = new List<Tag>();
+            if (_matchingResults != null && _matchingResults.Count > 0)
             {
-                id = 1,
-                subject_name = subject,
-                chapter_number = 0,
-                chapter_name = "Custom",
-                topic_name = "Custom",
-                session_type = _selectedSessionType
-            };
+                int idCounter = 1;
+                foreach (var res in _matchingResults)
+                {
+                    customTags.Add(new Tag
+                    {
+                        id = idCounter++,
+                        subject_name = string.IsNullOrWhiteSpace(res.SubjectShortName) ? subject : res.SubjectShortName,
+                        chapter_number = res.ChapterNumber,
+                        chapter_name = res.ChapterName,
+                        topic_name = res.TopicName,
+                        book_name = res.BookFullName,
+                        page_range = res.PageRangeString,
+                        session_type = _selectedSessionType
+                    });
+                }
+            }
+            else
+            {
+                customTags.Add(new Tag
+                {
+                    id = 1,
+                    subject_name = subject,
+                    chapter_number = 0,
+                    chapter_name = "Custom",
+                    topic_name = "Custom",
+                    session_type = _selectedSessionType
+                });
+            }
 
-            var customSession = new BasicSessionBundle(null, isCurated: false, nextReviewDate: DateTime.UtcNow.AddDays(3), sessionName: sessionName, tag: customTag, tags: new[] { customTag });
+            var customSession = new BasicSessionBundle(null, isCurated: false, nextReviewDate: DateTime.UtcNow.AddDays(3), sessionName: sessionName, tag: customTags[0], tags: customTags);
             SessionService.Instance.SaveSession(customSession);
             NotificationCard.Dismiss();
             Frame.Navigate(typeof(EditCanvasPage), customSession);

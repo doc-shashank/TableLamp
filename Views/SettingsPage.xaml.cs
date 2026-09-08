@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using TableLamp.Services;
 using WinRT.Interop;
 
@@ -16,21 +17,161 @@ namespace TableLamp.Views
             this.InitializeComponent();
 
             PresetTagDatabase.Instance.PresetsChanged += RefreshStats;
+            CustomPresetTagDatabase.Instance.PresetsChanged += RefreshStats;
             RefreshStats();
 
             ImportJsonFilesButton.Click += OnImportJsonFilesClicked;
             ImportFolderButton.Click += OnImportFolderClicked;
             FormatDatabaseButton.Click += OnFormatDatabaseClicked;
             RestoreStartersButton.Click += OnRestoreStartersClicked;
+            CheckForUpdatesButton.Click += OnCheckForUpdatesClicked;
+
+            LoadNotificationDurationSetting();
+            NotificationDurationComboBox.SelectionChanged += OnNotificationDurationChanged;
+        }
+
+        private void OnCheckForUpdatesClicked(object sender, RoutedEventArgs e)
+        {
+            NotificationCard.Show("You are running the latest version of Table Lamp (v0.0.6.5).", InfoBarSeverity.Success);
+        }
+
+        private bool _isInitializingSettings = true;
+
+        private void LoadNotificationDurationSetting()
+        {
+            _isInitializingSettings = true;
+            int current = AppSettingsService.Instance.NotificationDurationSeconds;
+            foreach (var item in NotificationDurationComboBox.Items)
+            {
+                if (item is ComboBoxItem cbi && cbi.Tag is string tagStr && int.TryParse(tagStr, out int val) && val == current)
+                {
+                    NotificationDurationComboBox.SelectedItem = cbi;
+                    break;
+                }
+            }
+            if (NotificationDurationComboBox.SelectedItem == null && NotificationDurationComboBox.Items.Count > 1)
+            {
+                NotificationDurationComboBox.SelectedIndex = 1; // 5s default
+            }
+            _isInitializingSettings = false;
+        }
+
+        private void OnNotificationDurationChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isInitializingSettings) return;
+
+            if (NotificationDurationComboBox.SelectedItem is ComboBoxItem cbi &&
+                cbi.Tag is string tagStr &&
+                int.TryParse(tagStr, out int seconds))
+            {
+                AppSettingsService.Instance.NotificationDurationSeconds = seconds;
+                NotificationCard.Show($"Notification duration set to {seconds} seconds.", InfoBarSeverity.Success, "Setting Saved");
+            }
         }
 
         private void RefreshStats()
         {
-            var db = PresetTagDatabase.Instance;
-            SubjectsCountText.Text = db.SubjectCount.ToString();
-            ChaptersCountText.Text = db.ChapterCount.ToString();
-            TopicsCountText.Text = db.TopicCount.ToString();
-            StoragePathText.Text = $"Database Path: {db.StoragePath}";
+            // Preset database stats dynamically presented via View Statistics dialog
+        }
+
+        private async void OnViewStatisticsClicked(object sender, RoutedEventArgs e)
+        {
+            var curatedDb = PresetTagDatabase.Instance;
+            var customDb = CustomPresetTagDatabase.Instance;
+
+            var contentPanel = new StackPanel { Spacing = 16 };
+
+            // Curated DB Section
+            contentPanel.Children.Add(new TextBlock
+            {
+                Text = "Curated Presets Database (Canonical / Synced)",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                FontSize = 13
+            });
+
+            var curatedGrid = new Grid { ColumnSpacing = 12 };
+            curatedGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            curatedGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            curatedGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            curatedGrid.Children.Add(CreateMetricCard("Subjects", curatedDb.SubjectCount.ToString(), 0));
+            curatedGrid.Children.Add(CreateMetricCard("Chapters", curatedDb.ChapterCount.ToString(), 1));
+            curatedGrid.Children.Add(CreateMetricCard("Topics", curatedDb.TopicCount.ToString(), 2));
+            contentPanel.Children.Add(curatedGrid);
+
+            contentPanel.Children.Add(new TextBlock
+            {
+                Text = $"Path: {curatedDb.StoragePath}",
+                FontSize = 11,
+                Foreground = Application.Current.Resources.TryGetValue("TextFillColorTertiaryBrush", out var ter) && ter is Brush terBrush ? terBrush : null,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            // Custom DB Section
+            contentPanel.Children.Add(new TextBlock
+            {
+                Text = "Custom Presets Database (User Imported)",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                FontSize = 13,
+                Margin = new Thickness(0, 8, 0, 0)
+            });
+
+            var customGrid = new Grid { ColumnSpacing = 12 };
+            customGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            customGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            customGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            customGrid.Children.Add(CreateMetricCard("Subjects", customDb.SubjectCount.ToString(), 0));
+            customGrid.Children.Add(CreateMetricCard("Chapters", customDb.ChapterCount.ToString(), 1));
+            customGrid.Children.Add(CreateMetricCard("Topics", customDb.TopicCount.ToString(), 2));
+            contentPanel.Children.Add(customGrid);
+
+            contentPanel.Children.Add(new TextBlock
+            {
+                Text = $"Path: {customDb.StoragePath}",
+                FontSize = 11,
+                Foreground = Application.Current.Resources.TryGetValue("TextFillColorTertiaryBrush", out var ter2) && ter2 is Brush ter2Brush ? ter2Brush : null,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            var dialog = new ContentDialog
+            {
+                Title = "Preset Databases Overview",
+                CloseButtonText = "Close",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot,
+                Content = contentPanel
+            };
+
+            await dialog.ShowAsync();
+        }
+
+        private static Border CreateMetricCard(string title, string value, int column)
+        {
+            var card = new Border
+            {
+                Background = Application.Current.Resources.TryGetValue("LayerFillColorDefaultBrush", out var bg) && bg is Brush bgBrush ? bgBrush : null,
+                BorderBrush = Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out var stroke) && stroke is Brush strokeBrush ? strokeBrush : null,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 10, 12, 10)
+            };
+            Grid.SetColumn(card, column);
+
+            var sp = new StackPanel { Spacing = 4 };
+            sp.Children.Add(new TextBlock
+            {
+                Text = title,
+                FontSize = 11,
+                Foreground = Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var s) && s is Brush sBrush ? sBrush : null
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = value,
+                FontSize = 22,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                Foreground = Application.Current.Resources.TryGetValue("AccentTextFillColorPrimaryBrush", out var a) && a is Brush aBrush ? aBrush : null
+            });
+            card.Child = sp;
+            return card;
         }
 
         private async void OnImportJsonFilesClicked(object sender, RoutedEventArgs e)
@@ -49,9 +190,9 @@ namespace TableLamp.Views
                 if (files != null && files.Count > 0)
                 {
                     var paths = files.Select(f => f.Path);
-                    var (success, failed) = PresetTagDatabase.Instance.ImportJsonFiles(paths);
+                    var (success, failed) = CustomPresetTagDatabase.Instance.ImportJsonFiles(paths);
 
-                    ShowStatus($"Import complete: {success} file(s) merged into preset database. ({failed} failed)",
+                    ShowStatus($"Import complete: {success} file(s) merged into custom preset database. ({failed} failed)",
                         failed == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning);
                     RefreshStats();
                     return;
@@ -81,8 +222,8 @@ namespace TableLamp.Views
                 var folder = await picker.PickSingleFolderAsync();
                 if (folder != null)
                 {
-                    var (total, success, failed) = PresetTagDatabase.Instance.ImportDirectory(folder.Path);
-                    ShowStatus($"Folder scan complete: Found {total} JSON files. Successfully merged {success} into database ({failed} failed).",
+                    var (total, success, failed) = CustomPresetTagDatabase.Instance.ImportDirectory(folder.Path);
+                    ShowStatus($"Folder scan complete: Found {total} JSON files. Successfully merged {success} into custom database ({failed} failed).",
                         success > 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning);
                     RefreshStats();
                     return;
@@ -131,8 +272,8 @@ namespace TableLamp.Views
                 {
                     if (Directory.Exists(path))
                     {
-                        var (total, success, failed) = PresetTagDatabase.Instance.ImportDirectory(path);
-                        ShowStatus($"Folder scan complete: Found {total} JSON files. Merged {success} ({failed} failed).", InfoBarSeverity.Success);
+                        var (total, success, failed) = CustomPresetTagDatabase.Instance.ImportDirectory(path);
+                        ShowStatus($"Folder scan complete: Found {total} JSON files. Merged {success} into custom database ({failed} failed).", InfoBarSeverity.Success);
                         RefreshStats();
                     }
                     else
@@ -144,8 +285,8 @@ namespace TableLamp.Views
                 {
                     if (File.Exists(path))
                     {
-                        var (success, failed) = PresetTagDatabase.Instance.ImportJsonFiles(new[] { path });
-                        ShowStatus($"Import complete: {success} file merged.", InfoBarSeverity.Success);
+                        var (success, failed) = CustomPresetTagDatabase.Instance.ImportJsonFiles(new[] { path });
+                        ShowStatus($"Import complete: {success} file merged into custom database.", InfoBarSeverity.Success);
                         RefreshStats();
                     }
                     else
@@ -160,9 +301,9 @@ namespace TableLamp.Views
         {
             var confirmDialog = new ContentDialog
             {
-                Title = "Format Preset Database?",
-                Content = "This will remove all subjects, chapters, and topics from the database to start completely afresh. This action cannot be undone.",
-                PrimaryButtonText = "Format Database",
+                Title = "Format Preset Databases?",
+                Content = "This will format and reset both Custom and Curated preset databases to start completely afresh. This action cannot be undone.",
+                PrimaryButtonText = "Format Databases",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = this.XamlRoot
@@ -171,8 +312,9 @@ namespace TableLamp.Views
             var result = await confirmDialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
+                CustomPresetTagDatabase.Instance.FormatDatabase();
                 PresetTagDatabase.Instance.FormatDatabase();
-                ShowStatus("Database formatted and reset to empty state.", InfoBarSeverity.Warning);
+                ShowStatus("Databases formatted and reset to empty state.", InfoBarSeverity.Warning);
                 RefreshStats();
             }
         }

@@ -11,50 +11,75 @@
     <Grid x:Name="ToastRoot"
           Visibility="Collapsed"
           Margin="0,0,0,0">
+        <!-- Whitish soft shadow / elevated glow border -->
+        <Border CornerRadius="12"
+                Margin="-2"
+                Background="#20FFFFFF"
+                BorderBrush="#40FFFFFF"
+                BorderThickness="1.5" />
+
+        <!-- Main Card Border -->
         <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1.5"
                 CornerRadius="10"
-                Padding="14,10"
                 MinWidth="320"
                 MaxWidth="620">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                <!-- Severity Icon Badge -->
-                <Border x:Name="SeverityIconBorder"
-                        Grid.Column="0"
-                        Width="28"
-                        Height="28"
-                        CornerRadius="14"
-                        VerticalAlignment="Center">
-                    <FontIcon x:Name="SeverityFontIcon"
-                              FontSize="13"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
-                </Border>
+            <Grid RowDefinitions="*,Auto">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="12"
+                      Padding="14,10">
+                    <!-- Severity Icon Badge -->
+                    <Border x:Name="SeverityIconBorder"
+                            Grid.Column="0"
+                            Width="28"
+                            Height="28"
+                            CornerRadius="14"
+                            VerticalAlignment="Center">
+                        <FontIcon x:Name="SeverityFontIcon"
+                                  FontSize="13"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                    </Border>
 
-                <!-- Message Content -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="ToastTitleText"
-                               FontWeight="SemiBold"
-                               FontSize="13"
-                               Visibility="Collapsed" />
-                    <TextBlock x:Name="ToastMessageText"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                </StackPanel>
+                    <!-- Message Content -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock x:Name="ToastTitleText"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   Visibility="Collapsed" />
+                        <TextBlock x:Name="ToastMessageText"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
 
-                <!-- Dismiss Button ('X') -->
-                <Button x:Name="DismissToastButton"
-                        Grid.Column="2"
-                        Style="{ThemeResource SubtleButtonStyle}"
-                        Width="28"
-                        Height="28"
-                        Padding="0"
-                        VerticalAlignment="Center"
-                        ToolTipService.ToolTip="Dismiss">
-                    <FontIcon Glyph="&#xE8BB;" FontSize="10" />
-                </Button>
+                    <!-- Dismiss Button ('X') -->
+                    <Button x:Name="DismissToastButton"
+                            Grid.Column="2"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            VerticalAlignment="Center"
+                            ToolTipService.ToolTip="Dismiss">
+                        <FontIcon Glyph="&#xE8BB;" FontSize="10" />
+                    </Button>
+                </Grid>
+
+                <!-- Backwards Progress Bar along lower border of card -->
+                <ProgressBar x:Name="DismissProgressBar"
+                             Grid.Row="1"
+                             Height="3"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="100"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Bottom"
+                             CornerRadius="0,0,8,8"
+                             Background="Transparent"
+                             Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
             </Grid>
         </Border>
     </Grid>

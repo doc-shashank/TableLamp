@@ -153,7 +153,7 @@ namespace TableLamp.Views
             if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accentBrush) && accentBrush is Brush brush)
             {
                 BasicCard.BorderBrush = brush;
-                BasicCard.BorderThickness = new Thickness(2);
+                BasicCard.BorderThickness = new Thickness(1.5);
             }
             if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out object? bgBrush) && bgBrush is Brush hoverBg)
             {
@@ -168,7 +168,7 @@ namespace TableLamp.Views
 
         private void OnBasicPointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            BasicCard.BorderThickness = new Thickness(2.5);
+            BasicCard.BorderThickness = new Thickness(1.5);
         }
 
         private void OnBasicPointerReleased(object sender, PointerRoutedEventArgs e)

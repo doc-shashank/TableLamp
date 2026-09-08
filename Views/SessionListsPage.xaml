@@ -11,7 +11,7 @@
     <Grid>
         <!-- Sessions List & Centered Header -->
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="860" HorizontalAlignment="Center" Spacing="20" Margin="32,24,32,48">
+            <StackPanel Width="1200" MaxWidth="1200" HorizontalAlignment="Center" Spacing="20" Margin="32,24,32,48">
                 <!-- Header (Top navigation button + Header in center flow) -->
                 <StackPanel Spacing="6">
                     <Grid Margin="0,0,0,8">
@@ -42,10 +42,80 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
 
-                <!-- Search Box -->
-                <TextBox x:Name="SearchBox"
-                         PlaceholderText="Search sessions by subject or chapter..."
-                         Margin="0,4,0,0" />
+                <!-- Filter & Search Control Strip -->
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search Box on Left -->
+                    <TextBox x:Name="SearchBox"
+                             Grid.Column="0"
+                             PlaceholderText="Search sessions by subject, chapter, or topic..."
+                             Margin="0,0,16,0" />
+
+                    <!-- Filter & Sort Controls on Right -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <!-- Session Type Filter: All / Self / Class -->
+                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="3">
+                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                <Button x:Name="FilterAllButton"
+                                        Content="All"
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        Padding="12,5"
+                                        CornerRadius="6"
+                                        FontSize="12" />
+                                <Button x:Name="FilterSelfButton"
+                                        Content="Self"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Padding="12,5"
+                                        CornerRadius="6"
+                                        FontSize="12" />
+                                <Button x:Name="FilterClassButton"
+                                        Content="Class"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Padding="12,5"
+                                        CornerRadius="6"
+                                        FontSize="12" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sort Order: Newest / Oldest -->
+                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="3">
+                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                <Button x:Name="SortNewestButton"
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        Padding="12,5"
+                                        CornerRadius="6"
+                                        FontSize="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE8D7;" FontSize="11" />
+                                        <TextBlock Text="Newest" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="SortOldestButton"
+                                        Style="{ThemeResource SubtleButtonStyle}"
+                                        Padding="12,5"
+                                        CornerRadius="6"
+                                        FontSize="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE8D6;" FontSize="11" />
+                                        <TextBlock Text="Oldest" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
 
                 <!-- Empty State -->
                 <Border x:Name="EmptyStateBorder"
@@ -58,7 +128,7 @@
                     <StackPanel Spacing="12" HorizontalAlignment="Center">
                         <FontIcon Glyph="&#xE8F1;" FontSize="44" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
                         <TextBlock Text="No Sessions Available" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <TextBlock Text="Create a new study session to begin reviewing questions."
+                        <TextBlock Text="Create a new study session or adjust filters to begin reviewing questions."
                                    FontSize="13"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center" />
@@ -76,6 +146,8 @@
                                     CornerRadius="12"
                                     Padding="20,16"
                                     Tapped="OnSessionCardTapped"
+                                    PointerEntered="OnSessionCardPointerEntered"
+                                    PointerExited="OnSessionCardPointerExited"
                                     Tag="{Binding}">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- Session Icon -->
@@ -83,10 +155,11 @@
                                             Width="44"
                                             Height="44"
                                             CornerRadius="10"
-                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            Background="{Binding SessionTypeIconBackground}"
                                             Margin="0,0,16,0"
-                                            VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            VerticalAlignment="Center"
+                                            ToolTipService.ToolTip="{Binding SessionTypeTooltip}">
+                                        <FontIcon Glyph="{Binding SessionTypeGlyph}" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
 
                                     <!-- Session Info -->

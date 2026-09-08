@@ -10,7 +10,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
         <!-- 2-Column Dashboard: Left: Recent Sessions, Right: Action Buttons in their place -->
-        <Grid ColumnDefinitions="360,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1180" HorizontalAlignment="Center">
+        <Grid ColumnDefinitions="440,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1340" HorizontalAlignment="Center">
             <!-- 1. Left Column: Recent Sessions Section -->
             <StackPanel Grid.Column="0" Spacing="16">
                 <Grid ColumnDefinitions="*,Auto">
@@ -38,17 +38,20 @@
                                     CornerRadius="12"
                                     Padding="14,12"
                                     Tapped="OnRecentSessionTapped"
+                                    PointerEntered="OnRecentSessionPointerEntered"
+                                    PointerExited="OnRecentSessionPointerExited"
                                     Tag="{Binding}">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <!-- Icon -->
+                                    <!-- Icon with Tooltip distinguishing Class and Self Session -->
                                     <Border Grid.Column="0"
                                             Width="36"
                                             Height="36"
                                             CornerRadius="8"
-                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            Background="{Binding SessionTypeIconBackground}"
                                             Margin="0,0,12,0"
-                                            VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8EC;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            VerticalAlignment="Center"
+                                            ToolTipService.ToolTip="{Binding SessionTypeTooltip}">
+                                        <FontIcon Glyph="{Binding SessionTypeGlyph}" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
 
                                     <!-- Session Details -->

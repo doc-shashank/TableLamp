@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using TableLamp.Models;
@@ -19,7 +21,18 @@ namespace TableLamp.Views
         {
             this.InitializeComponent();
 
-            BackButton.Click += (s, e) => Frame.Navigate(typeof(SessionListsPage));
+            BackButton.Click += (s, e) =>
+            {
+                if (Frame.CanGoBack)
+                {
+                    Frame.GoBack();
+                }
+                else
+                {
+                    Frame.Navigate(typeof(DashboardPage));
+                }
+            };
+            SessionInfoButton.Click += OnSessionInfoClicked;
             PreviousQuestionButton.Click += OnPreviousQuestionClicked;
             NextQuestionButton.Click += OnNextQuestionClicked;
             TextRadioButton.Checked += (s, e) => OnViewModeChanged("Text");
@@ -49,20 +62,76 @@ namespace TableLamp.Views
             if (_session == null) return;
 
             PageHeaderTitle.Text = _session.DisplayTitle;
+            HeaderSessionTypeGlyph.Glyph = _session.SessionTypeGlyph;
+            HeaderSessionTypeBadge.Background = new SolidColorBrush(
+                _session.IsClassSession
+                    ? ColorHelper.FromArgb(255, 138, 79, 255)
+                    : ColorHelper.FromArgb(255, 0, 103, 192));
+            ToolTipService.SetToolTip(HeaderSessionTypeBadge, _session.SessionTypeName);
+        }
 
-            var tag = _session.Tag;
-            if (tag != null)
+        private async void OnSessionInfoClicked(object sender, RoutedEventArgs e)
+        {
+            if (_session == null) return;
+
+            var panel = new StackPanel { Spacing = 10, MinWidth = 360 };
+
+            void AddRow(string label, string value)
             {
-                ExpanderSubjectText.Text = tag.subject_name ?? "General";
-                ExpanderChapterText.Text = $"Ch. {tag.chapter_number} - {tag.chapter_name}";
-                ExpanderTopicText.Text = string.IsNullOrWhiteSpace(tag.topic_name) ? "Not Specified" : tag.topic_name;
+                var row = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                var lbl = new TextBlock
+                {
+                    Text = label,
+                    FontSize = 12,
+                    Foreground = Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var s) && s is Brush sBrush ? sBrush : null
+                };
+                var val = new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(value) ? "—" : value,
+                    FontSize = 12,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                Grid.SetColumn(lbl, 0);
+                Grid.SetColumn(val, 1);
+                row.Children.Add(lbl);
+                row.Children.Add(val);
+                panel.Children.Add(row);
             }
-            else
+
+            AddRow("Session Name", _session.DisplayTitle);
+            AddRow("Session Type", _session.SessionTypeName);
+            AddRow("Subject", _session.Tag?.subject_name ?? "General");
+            AddRow("Chapters", _session.ChaptersSummary);
+            AddRow("Topics", _session.TopicsSummary);
+
+            if (!string.IsNullOrWhiteSpace(_session.Tag?.book_name))
             {
-                ExpanderSubjectText.Text = "General";
-                ExpanderChapterText.Text = "No Chapter Specified";
-                ExpanderTopicText.Text = "Not Specified";
+                AddRow("Book", _session.Tag.book_name);
             }
+
+            if (!string.IsNullOrWhiteSpace(_session.Tag?.page_range))
+            {
+                AddRow("Pages", _session.Tag.page_range);
+            }
+
+            AddRow("Questions", $"{_session.QuestionCount} question(s)");
+            AddRow("Created", $"{_session.FormattedDate} at {_session.FormattedTime}");
+            AddRow("Preset Mode", _session.isCurated ? "Curated Preset" : "Custom Preset");
+
+            var dialog = new ContentDialog
+            {
+                Title = "Session Details",
+                Content = panel,
+                CloseButtonText = "Close",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
 
         private void DisplayCurrentQuestion()

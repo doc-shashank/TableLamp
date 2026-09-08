@@ -23,7 +23,7 @@ namespace TableLamp.Views
             _basicUIController = new BasicUI(this);
 
             WireCardButtons();
-            ViewAllSessionsButton.Click += (s, e) => Frame.Navigate(typeof(SessionListsPage));
+            ViewAllSessionsButton.Click += (s, e) => Frame.Navigate(typeof(SessionListsPage), "Newest");
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -130,12 +130,14 @@ namespace TableLamp.Views
 
         private void HighlightCard(Border card, bool highlight)
         {
+            // Keep BorderThickness constant to prevent layout shifts during hover
+            card.BorderThickness = new Thickness(1.5);
+
             if (highlight)
             {
                 if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush b)
                 {
                     card.BorderBrush = b;
-                    card.BorderThickness = new Thickness(2);
                 }
             }
             else
@@ -143,7 +145,6 @@ namespace TableLamp.Views
                 if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush b)
                 {
                     card.BorderBrush = b;
-                    card.BorderThickness = new Thickness(1.5);
                 }
             }
         }
@@ -158,6 +159,36 @@ namespace TableLamp.Views
             if (sender is FrameworkElement elem && elem.Tag is BasicSessionBundle session)
             {
                 Frame.Navigate(typeof(ViewCanvasPage), session);
+            }
+        }
+
+        private void OnRecentSessionPointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
+            }
+        }
+
+        private void OnRecentSessionPointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
             }
         }
     }

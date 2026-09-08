@@ -8,27 +8,23 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header Bar -->
-        <Border Grid.Row="0"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1"
-                Background="{ThemeResource LayerFillColorDefaultBrush}"
-                Padding="32,16,32,16">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Study Calendar" FontSize="22" FontWeight="Bold" />
-                <TextBlock Text="Track and review your study sessions completed day-by-day."
-                           FontSize="13"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-        </Border>
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="1920" HorizontalAlignment="Stretch" Spacing="24" Margin="32,24,32,48">
+                <!-- Header (Settings Page Style) -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Study Calendar" FontSize="26" FontWeight="Bold" />
+                    <TextBlock Text="Track and review your study sessions completed day-by-day."
+                               FontSize="13"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
 
-        <!-- Two Column Layout: Calendar on Left, Sessions List on Right -->
-        <Grid Grid.Row="1" Margin="32,24,32,32" ColumnSpacing="24">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+                <!-- Two Column Layout: Calendar on Left, Sessions List on Right -->
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
             <!-- Calendar Card -->
             <Border Grid.Column="0"
@@ -57,7 +53,8 @@
                     BorderThickness="1"
                     CornerRadius="16"
                     Padding="24"
-                    VerticalAlignment="Stretch">
+                    VerticalAlignment="Top"
+                    MaxHeight="600">
                 <Grid RowDefinitions="Auto,*">
                     <!-- Day Header -->
                     <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
@@ -116,6 +113,8 @@
                                                     CornerRadius="10"
                                                     Padding="16,12"
                                                     Tapped="OnSessionCardTapped"
+                                                    PointerEntered="OnSessionCardPointerEntered"
+                                                    PointerExited="OnSessionCardPointerExited"
                                                     Tag="{Binding}">
                                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                                     <Border Grid.Column="0"
@@ -200,6 +199,8 @@
                                                     CornerRadius="10"
                                                     Padding="16,12"
                                                     Tapped="OnSessionCardTapped"
+                                                    PointerEntered="OnSessionCardPointerEntered"
+                                                    PointerExited="OnSessionCardPointerExited"
                                                     Tag="{Binding}">
                                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                                     <Border Grid.Column="0"
@@ -262,5 +263,7 @@
                 </Grid>
             </Border>
         </Grid>
-    </Grid>
+    </StackPanel>
+</ScrollViewer>
+</Grid>
 </Page>

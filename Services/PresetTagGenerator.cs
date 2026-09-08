@@ -204,5 +204,23 @@ namespace TableLamp.Services
 
             return GenerateJson(starter);
         }
+
+        /// <summary>
+        /// Creates a blank preset JSON string with only a dummy Subject field (no chapters or topics).
+        /// </summary>
+        public string CreateBlankSubjectPresetJson()
+        {
+            var blank = new Dictionary<string, PresetSubject>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Subject1"] = new PresetSubject
+                {
+                    short_name = "New Subject",
+                    full_name = "New Subject Full Name",
+                    edition = "1st"
+                }
+            };
+
+            return GenerateJson(blank);
+        }
     }
 }

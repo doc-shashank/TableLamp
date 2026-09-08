@@ -90,6 +90,10 @@ namespace TableLamp.Models
         public bool IsClassSession => SessionType == 1;
         public bool IsSelfSession => SessionType == 0;
 
+        public string SessionTypeGlyph => IsClassSession ? "\uE7BE" : "\uE77B";
+        public string SessionTypeIconBackground => IsClassSession ? "#8A4FFF" : "#0067C0";
+        public string SessionTypeTooltip => SessionTypeName;
+
         public BasicSessionBundle() : base()
         {
         }
