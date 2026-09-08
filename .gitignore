@@ -56,3 +56,7 @@ Generated\ Files/
 # Agent Instructions
 Agent_Instructions/
 Agent_Instructions*.txt
+
+# Android
+[Aa]ndroid/
+Android/
