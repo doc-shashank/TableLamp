@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using TableLamp.Models;
 
@@ -30,6 +31,11 @@ namespace TableLamp.Services
 
             InitializeDatabase();
         }
+
+        /// <summary>
+        /// True if the custom database contains no subjects.
+        /// </summary>
+        public bool IsEmpty => _inMemoryTree == null || _inMemoryTree.Count == 0;
 
         public void InitializeDatabase()
         {
@@ -207,6 +213,99 @@ namespace TableLamp.Services
             var files = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
             var (success, failed) = ImportJsonFiles(files);
             return (files.Length, success, failed);
+        }
+
+        /// <summary>
+        /// Safely imports preset JSON files from a compressed .zip archive into the custom database.
+        /// Includes Zip Slip, Zip Bomb, and file count protection.
+        /// </summary>
+        public (int totalFound, int success, int failed) ImportZipArchive(string zipFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(zipFilePath) || !File.Exists(zipFilePath))
+            {
+                return (0, 0, 0);
+            }
+
+            string tempExtractDir = Path.Combine(Path.GetTempPath(), $"TableLamp_CustomZip_{Guid.NewGuid():N}");
+            try
+            {
+                Directory.CreateDirectory(tempExtractDir);
+                string destinationRoot = Path.GetFullPath(tempExtractDir);
+                if (!destinationRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                {
+                    destinationRoot += Path.DirectorySeparatorChar;
+                }
+
+                using (var archive = ZipFile.OpenRead(zipFilePath))
+                {
+                    const int maxAllowedEntries = 1000;
+                    const long maxAllowedTotalBytes = 100L * 1024 * 1024; // 100 MB
+                    long totalBytesExtracted = 0;
+                    int entryCount = 0;
+
+                    foreach (var entry in archive.Entries)
+                    {
+                        entryCount++;
+                        if (entryCount > maxAllowedEntries)
+                        {
+                            throw new InvalidOperationException($"Zip archive contains too many entries (exceeds {maxAllowedEntries}).");
+                        }
+
+                        // Zip Slip prevention
+                        string entryDestination = Path.GetFullPath(Path.Combine(destinationRoot, entry.FullName));
+                        if (!entryDestination.StartsWith(destinationRoot, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidOperationException("Zip Slip path traversal attempt detected in archive.");
+                        }
+
+                        // Only extract JSON files
+                        if (string.IsNullOrEmpty(entry.Name))
+                        {
+                            // Directory entry
+                            Directory.CreateDirectory(entryDestination);
+                            continue;
+                        }
+
+                        if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (entry.Length < 0 || entry.Length > maxAllowedTotalBytes)
+                        {
+                            throw new InvalidOperationException("Zip entry uncompressed size exceeds safety limits.");
+                        }
+
+                        totalBytesExtracted += entry.Length;
+                        if (totalBytesExtracted > maxAllowedTotalBytes)
+                        {
+                            throw new InvalidOperationException($"Zip extraction exceeded total limit of {maxAllowedTotalBytes / (1024 * 1024)} MB.");
+                        }
+
+                        string? parentDir = Path.GetDirectoryName(entryDestination);
+                        if (!string.IsNullOrEmpty(parentDir))
+                        {
+                            Directory.CreateDirectory(parentDir);
+                        }
+
+                        entry.ExtractToFile(entryDestination, overwrite: true);
+                    }
+                }
+
+                // Import extracted JSON files into Custom database
+                return ImportDirectory(tempExtractDir);
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tempExtractDir))
+                    {
+                        Directory.Delete(tempExtractDir, true);
+                    }
+                }
+                catch { }
+            }
         }
 
         /// <summary>

@@ -176,9 +176,9 @@ namespace TableLamp.Tests
             }
             finally
             {
-                // Restore canonical for subsequent tests
+                // In v0.0.7.3 starter presets are removed; ResetToStarterPresets resets to empty
                 db.ResetToStarterPresets();
-                Assert.True(db.SubjectCount > 0);
+                Assert.True(db.IsEmpty);
             }
         }
     }

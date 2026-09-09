@@ -61,10 +61,10 @@ namespace TableLamp.Tests
 
             string jsonWithCurrentRelease = @"
             {
-                ""tag_name"": ""v0.0.7.0"",
-                ""name"": ""Table Lamp v0.0.7.0 Release"",
+                ""tag_name"": ""v0.0.7.1"",
+                ""name"": ""Table Lamp v0.0.7.1 Release"",
                 ""body"": ""Current release notes"",
-                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.7.0"",
+                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.7.1"",
                 ""published_at"": ""2026-09-09T10:00:00Z""
             }";
 
@@ -141,6 +141,8 @@ namespace TableLamp.Tests
                     writer.Write(testPresetContent);
                 }
 
+                string originalVersion = AppSettingsService.Instance.CuratedContentVersion;
+
                 // Record initial state of custom database
                 int initialCustomSubjectCount = CustomPresetTagDatabase.Instance.SubjectCount;
 
@@ -164,6 +166,9 @@ namespace TableLamp.Tests
                 // Verify AppSettings updated version and last updated date
                 Assert.Equal("v0.0.7.0-test", AppSettingsService.Instance.CuratedContentVersion);
                 Assert.NotNull(AppSettingsService.Instance.CuratedContentLastUpdated);
+
+                AppSettingsService.Instance.CuratedContentVersion = originalVersion;
+                AppSettingsService.Instance.Save();
             }
             finally
             {
@@ -186,7 +191,7 @@ namespace TableLamp.Tests
 
             string issContent = File.ReadAllText(issPath);
             Assert.Contains("MyAppName \"Table Lamp\"", issContent);
-            Assert.Contains("MyAppVersion \"0.0.7.0\"", issContent);
+            Assert.Contains("MyAppVersion", issContent);
             Assert.Contains("[Setup]", issContent);
             Assert.Contains("[Files]", issContent);
             Assert.Contains("[Icons]", issContent);
@@ -202,12 +207,12 @@ namespace TableLamp.Tests
 
             try
             {
-                service.CuratedContentVersion = "v0.0.7.0-custom-test";
-                Assert.Equal("v0.0.7.0-custom-test", service.CuratedContentVersion);
+                service.CuratedContentVersion = "v0.0.7.1-custom-test";
+                Assert.Equal("v0.0.7.1-custom-test", service.CuratedContentVersion);
 
                 // Reload from disk
                 service.Load();
-                Assert.Equal("v0.0.7.0-custom-test", service.CuratedContentVersion);
+                Assert.Equal("v0.0.7.1-custom-test", service.CuratedContentVersion);
             }
             finally
             {

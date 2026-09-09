@@ -50,22 +50,14 @@
         </Grid>
 
         <!-- Main Content Area: Mode Selection View -->
-        <Grid x:Name="LauncherModesContainer" RowDefinitions="Auto,*,Auto" Margin="32,20,32,18" VerticalAlignment="Center">
-            <!-- Launcher Header -->
+        <Grid x:Name="LauncherModesContainer" RowDefinitions="Auto,*,Auto,Auto" Margin="32,20,32,18" VerticalAlignment="Center">
+            <!-- Launcher Header (Version badge moved to bottom) -->
             <StackPanel Grid.Row="0" HorizontalAlignment="Center" Spacing="4">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                     <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
                         <FontIcon Glyph="&#xE781;" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <TextBlock Text="Table Lamp" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
-                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
-                            CornerRadius="6" 
-                            Padding="7,2" 
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                            BorderThickness="1"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="v0.0.7.0" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </Border>
                 </StackPanel>
                 <TextBlock Text="Select a mode to launch your study workspace"
                            FontSize="12"
@@ -78,7 +70,7 @@
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center"
                   ColumnSpacing="18"
-                  Margin="0,20,0,20">
+                  Margin="0,18,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200" />
                     <ColumnDefinition Width="200" />
@@ -180,8 +172,50 @@
                 </Border>
             </Grid>
 
-            <!-- Launcher Footer with Dev Tools Button -->
-            <Grid Grid.Row="2" Margin="0,4,0,0">
+            <!-- Update Notification Labels (App Update & Curated Tags) below cards, above version label -->
+            <StackPanel Grid.Row="2"
+                        x:Name="UpdateLabelsPanel"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="4"
+                        Margin="0,0,0,10">
+                <!-- App Version Update Notification Label -->
+                <Button x:Name="AppUpdateNotificationBtn"
+                        Visibility="Collapsed"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Padding="10,4"
+                        HorizontalAlignment="Center"
+                        Background="Transparent">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE896;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock x:Name="AppUpdateNotificationText"
+                                   Text="App Update Available"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Curated Tags Update Notification Label -->
+                <Button x:Name="CuratedUpdateNotificationBtn"
+                        Visibility="Collapsed"
+                        Style="{ThemeResource SubtleButtonStyle}"
+                        Padding="10,4"
+                        HorizontalAlignment="Center"
+                        Background="Transparent">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE896;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock x:Name="CuratedUpdateNotificationText"
+                                   Text="Curated Tags Update Available"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Launcher Footer with Version Label at Bottom of Screen -->
+            <Grid Grid.Row="3" Margin="0,4,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -190,7 +224,7 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Table Lamp" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                    <TextBlock Text="Version 0.0.7.0" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="Version 0.0.7.5" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
 
                 <Button x:Name="DevToolsButton"
@@ -206,11 +240,13 @@
             </Grid>
         </Grid>
 
-        <!-- In-Window Launcher Settings Container -->
-        <Frame x:Name="LauncherSettingsFrame"
-               Visibility="Collapsed"
-               Margin="0,38,0,0"
-               Canvas.ZIndex="50" />
+        <!-- In-Window Launcher Settings Presenter -->
+        <ContentControl x:Name="LauncherSettingsPresenter"
+                        Visibility="Collapsed"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Margin="0,38,0,0"
+                        Canvas.ZIndex="50" />
 
         <!-- Floating Notification Card floating below App Name header on Left -->
         <local:FloatingNotificationCard x:Name="NotificationCard"

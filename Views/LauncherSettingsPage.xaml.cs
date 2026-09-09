@@ -35,7 +35,15 @@ namespace TableLamp.Views
             CuratedRepoInfoText.Text = $"Repository: {CuratedContentUpdateService.RepoOwner}/{CuratedContentUpdateService.RepoName}";
 
             var db = PresetTagDatabase.Instance;
-            CuratedMetricsText.Text = $"Curated Database: {db.SubjectCount} subjects, {db.ChapterCount} chapters, {db.TopicCount} topics";
+            if (db.IsEmpty)
+            {
+                CuratedMetricsText.Text = "Curated Database: Empty (0 subjects). Download latest tags from GitHub.";
+                ShowBanner("Curated tags database is currently empty. Click 'Sync Curated Presets' below to download the latest tags from the GitHub repository.", InfoBarSeverity.Informational);
+            }
+            else
+            {
+                CuratedMetricsText.Text = $"Curated Database: {db.SubjectCount} subjects, {db.ChapterCount} chapters, {db.TopicCount} topics";
+            }
         }
 
         private void WireEvents()
@@ -108,8 +116,16 @@ namespace TableLamp.Views
                 if (result.Success)
                 {
                     RefreshCuratedInfo();
-                    CuratedStatusText.Text = $"Successfully synced Curated Tags ({result.VersionApplied}). Found {result.TotalFound} files, merged {result.FilesImported} preset file(s).";
-                    ShowBanner($"Curated tags updated to {result.VersionApplied} ({result.FilesImported} files merged). Custom tags remain untouched.", InfoBarSeverity.Success);
+                    if (result.AlreadyUpToDate)
+                    {
+                        CuratedStatusText.Text = $"Curated tags are already up to date ({result.VersionApplied}).";
+                        ShowBanner($"Curated tags are already up to date ({result.VersionApplied}).", InfoBarSeverity.Informational);
+                    }
+                    else
+                    {
+                        CuratedStatusText.Text = $"Successfully synced Curated Tags ({result.VersionApplied}). Found {result.TotalFound} files, merged {result.FilesImported} preset file(s).";
+                        ShowBanner($"Curated tags updated to {result.VersionApplied} ({result.FilesImported} files merged). Custom tags remain untouched.", InfoBarSeverity.Success);
+                    }
                 }
                 else
                 {

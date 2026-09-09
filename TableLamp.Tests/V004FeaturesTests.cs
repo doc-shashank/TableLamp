@@ -39,6 +39,7 @@ namespace TableLamp.Tests
         [Fact]
         public void CustomTagService_DetectsCuratedPresetSubject()
         {
+            PresetTagDatabase.Instance.ReloadFromJson(new PresetTagGenerator().CreateStarterPresetJson());
             var service = CustomTagService.Instance;
 
             Assert.True(service.IsCuratedSubject("Robins Physiology"));
@@ -50,6 +51,7 @@ namespace TableLamp.Tests
         [Fact]
         public void CustomTagService_BlocksCustomTag_WithCuratedSubjectName()
         {
+            PresetTagDatabase.Instance.ReloadFromJson(new PresetTagGenerator().CreateStarterPresetJson());
             var service = CustomTagService.Instance;
 
             var conflictingTag = new Tag

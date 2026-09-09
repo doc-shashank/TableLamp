@@ -64,12 +64,12 @@ namespace TableLamp.Views
             // Duration is configurable in settings
             if (autoDismissMs > 0)
             {
-                _totalDurationMs = autoDismissMs;
+                _totalDurationMs = Math.Max(500.0, autoDismissMs);
             }
             else
             {
                 int durationSeconds = TableLamp.Services.AppSettingsService.Instance.NotificationDurationSeconds;
-                _totalDurationMs = durationSeconds * 1000.0;
+                _totalDurationMs = Math.Max(1000.0, durationSeconds * 1000.0);
             }
 
             DismissProgressBar.Value = 100.0;
@@ -92,7 +92,7 @@ namespace TableLamp.Views
             double elapsed = (DateTime.UtcNow - _startTime).TotalMilliseconds;
             double remainingRatio = 1.0 - (elapsed / _totalDurationMs);
 
-            if (remainingRatio <= 0.0)
+            if (double.IsNaN(remainingRatio) || remainingRatio <= 0.0)
             {
                 DismissProgressBar.Value = 0.0;
                 Dismiss();

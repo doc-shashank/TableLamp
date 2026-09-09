@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
@@ -56,6 +57,9 @@ namespace TableLamp.Views
         private string? _activeTopicKey;
         private string? _activeFilePath;
         private string? _activeWorkspaceDir;
+        private string? _selectedWorkspaceItemPath;
+        private bool _selectedWorkspaceItemIsFolder;
+        private Border? _selectedWorkspaceRowBorder;
 
         private bool _isUpdatingPreviewText;
         private bool _hasUnsavedChanges;
@@ -202,6 +206,8 @@ namespace TableLamp.Views
             // Wire File menu actions
             MenuNewWorkspace.Click += OnNewWorkspaceClicked;
             MenuOpenWorkspace.Click += OnOpenWorkspaceClicked;
+            MenuOpenZipWorkspace.Click += OnOpenZipWorkspaceClicked;
+            MenuExportWorkspace.Click += OnExportWorkspaceClicked;
             MenuNewJsonFile.Click += OnNewJsonFileClicked;
             MenuOpenJsonFile.Click += OnOpenJsonFileClicked;
             MenuSaveJsonFile.Click += OnSaveJsonClicked;
@@ -211,6 +217,10 @@ namespace TableLamp.Views
             ContextNewFolder.Click += OnNewFolderClicked;
             ContextRefreshWorkspace.Click += (s, e) => RefreshWorkspaceFiles();
             CloseWorkspaceButton.Click += (s, e) => CloseWorkspace();
+
+            // Clear selection border when clicking background or workspace container
+            WorkspaceCard.PointerPressed += (s, e) => ClearWorkspaceSelection();
+            WorkspaceTreeContainer.PointerPressed += (s, e) => ClearWorkspaceSelection();
 
             // Workspace path label directly opens directory on click
             WorkspacePathText.Tapped += (s, e) =>
@@ -271,20 +281,41 @@ namespace TableLamp.Views
             bool restoredSomething = false;
             if (!string.IsNullOrEmpty(lastWorkspace) && Directory.Exists(lastWorkspace))
             {
-                OpenWorkspace(lastWorkspace);
+                _activeWorkspaceDir = lastWorkspace;
+                WorkspacePathText.Text = lastWorkspace;
+                WorkspaceCard.Visibility = Visibility.Visible;
+                _workspaceDb.ScanWorkspace(lastWorkspace);
+
+                string? fileToOpen = null;
                 if (!string.IsNullOrEmpty(lastJson) && File.Exists(lastJson))
                 {
-                    LoadJsonFile(lastJson);
+                    fileToOpen = lastJson;
+                }
+                else
+                {
+                    fileToOpen = Directory.GetFiles(lastWorkspace, "*.json", SearchOption.AllDirectories).FirstOrDefault();
+                }
+
+                if (!string.IsNullOrEmpty(fileToOpen) && File.Exists(fileToOpen))
+                {
+                    _activeFilePath = fileToOpen;
+                    // Auto-expand all ancestor directories so file is visible and highlighted
+                    string? dirCursor = Path.GetDirectoryName(fileToOpen);
+                    while (!string.IsNullOrEmpty(dirCursor) && dirCursor.Length >= lastWorkspace.Length)
+                    {
+                        _expandedWorkspaceFolders.Add(dirCursor);
+                        if (string.Equals(dirCursor, lastWorkspace, StringComparison.OrdinalIgnoreCase))
+                            break;
+                        dirCursor = Path.GetDirectoryName(dirCursor);
+                    }
+
+                    RefreshWorkspaceFiles();
+                    LoadJsonFile(fileToOpen);
                     restoredSomething = true;
                 }
                 else
                 {
-                    var firstFile = Directory.GetFiles(lastWorkspace, "*.json").FirstOrDefault();
-                    if (firstFile != null)
-                    {
-                        LoadJsonFile(firstFile);
-                        restoredSomething = true;
-                    }
+                    RefreshWorkspaceFiles();
                 }
             }
             else if (!string.IsNullOrEmpty(lastJson) && File.Exists(lastJson))
@@ -1111,14 +1142,7 @@ namespace TableLamp.Views
 
                 if (isSubjSelected) _lastSelectedNodeKey = subjNodeKey;
 
-                var subjChildren = new StackPanel
-                {
-                    Spacing = 2,
-                    ChildrenTransitions = new TransitionCollection
-                    {
-                        new EntranceThemeTransition { FromVerticalOffset = -8, IsStaggeringEnabled = true }
-                    }
-                };
+                var subjChildren = new StackPanel { Spacing = 2 };
 
                 var subjItem = CreateLevelNode(
                     displayId: subjDisplayId,
@@ -1164,14 +1188,7 @@ namespace TableLamp.Views
 
                         if (isChSelected) _lastSelectedNodeKey = chNodeKey;
 
-                        var chChildren = new StackPanel
-                        {
-                            Spacing = 2,
-                            ChildrenTransitions = new TransitionCollection
-                            {
-                                new EntranceThemeTransition { FromVerticalOffset = -8, IsStaggeringEnabled = true }
-                            }
-                        };
+                        var chChildren = new StackPanel { Spacing = 2 };
 
                         var chItem = CreateLevelNode(
                             displayId: chDisplayId,
@@ -1215,14 +1232,7 @@ namespace TableLamp.Views
 
                                 if (isTopSelected) _lastSelectedNodeKey = topNodeKey;
 
-                                var topChildren = new StackPanel
-                                {
-                                    Spacing = 2,
-                                    ChildrenTransitions = new TransitionCollection
-                                    {
-                                        new EntranceThemeTransition { FromVerticalOffset = -8, IsStaggeringEnabled = true }
-                                    }
-                                };
+                                var topChildren = new StackPanel { Spacing = 2 };
 
                                 var topItem = CreateLevelNode(
                                     displayId: topDisplayId,
@@ -1426,7 +1436,7 @@ namespace TableLamp.Views
 
         /// <summary>
         /// Toggles expansion for an individual node without recreating the whole tree.
-        /// Animations are restricted strictly to the toggled node's child content.
+        /// Animations trigger on every expansion (downward slide) and on collapse (upward slide).
         /// </summary>
         private void ToggleNodeExpansion(string nodeKey)
         {
@@ -1445,11 +1455,89 @@ namespace TableLamp.Views
             if (_treeNodeMap.TryGetValue(nodeKey, out var entry))
             {
                 entry.chevronIcon.Glyph = isNowExpanded ? "\uE70D" : "\uE76C";
-                entry.childPanel.Visibility = isNowExpanded ? Visibility.Visible : Visibility.Collapsed;
+                AnimateNodeChildPanel(entry.childPanel, isNowExpanded);
             }
             else
             {
                 RenderSimplifiedTree();
+            }
+        }
+
+        private void AnimateNodeChildPanel(StackPanel childPanel, bool expand)
+        {
+            var transform = childPanel.RenderTransform as TranslateTransform;
+            if (transform == null)
+            {
+                transform = new TranslateTransform();
+                childPanel.RenderTransform = transform;
+            }
+
+            if (expand)
+            {
+                childPanel.Visibility = Visibility.Visible;
+                transform.Y = -14;
+                childPanel.Opacity = 0.0;
+
+                var sb = new Storyboard();
+
+                var slideAnim = new DoubleAnimation
+                {
+                    From = -14,
+                    To = 0,
+                    Duration = TimeSpan.FromMilliseconds(200),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(slideAnim, transform);
+                Storyboard.SetTargetProperty(slideAnim, "Y");
+
+                var fadeAnim = new DoubleAnimation
+                {
+                    From = 0.0,
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(200),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(fadeAnim, childPanel);
+                Storyboard.SetTargetProperty(fadeAnim, "Opacity");
+
+                sb.Children.Add(slideAnim);
+                sb.Children.Add(fadeAnim);
+                sb.Begin();
+            }
+            else
+            {
+                var sb = new Storyboard();
+
+                var slideAnim = new DoubleAnimation
+                {
+                    From = 0,
+                    To = -14,
+                    Duration = TimeSpan.FromMilliseconds(160),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+                Storyboard.SetTarget(slideAnim, transform);
+                Storyboard.SetTargetProperty(slideAnim, "Y");
+
+                var fadeAnim = new DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(160),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+                Storyboard.SetTarget(fadeAnim, childPanel);
+                Storyboard.SetTargetProperty(fadeAnim, "Opacity");
+
+                sb.Children.Add(slideAnim);
+                sb.Children.Add(fadeAnim);
+
+                sb.Completed += (s, e) =>
+                {
+                    childPanel.Visibility = Visibility.Collapsed;
+                    transform.Y = 0;
+                    childPanel.Opacity = 1.0;
+                };
+                sb.Begin();
             }
         }
 
@@ -1746,7 +1834,7 @@ namespace TableLamp.Views
 
                 SetJsonText(json);
                 DetectContextFromSelection();
-                ShowStatus($"Loaded JSON file: {Path.GetFileName(filePath)}", InfoBarSeverity.Success);
+                SwitchPreviewMode("Simplified");
             }
             catch (Exception ex)
             {
@@ -1836,6 +1924,324 @@ namespace TableLamp.Views
             await PromptForDirectoryAndOpenWorkspace("Open Workspace Directory");
         }
 
+        private async void OnExportWorkspaceClicked(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_activeWorkspaceDir) || !Directory.Exists(_activeWorkspaceDir))
+            {
+                ShowStatus("No active workspace to export. Please open a workspace first.", InfoBarSeverity.Warning);
+                return;
+            }
+
+            if (_hasUnsavedChanges)
+            {
+                OnSaveJsonClicked(null!, null!);
+            }
+
+            string infoFilePath = Path.Combine(_activeWorkspaceDir, "WORKSPACE_INFO.json");
+            string? existingVersion = null;
+            if (File.Exists(infoFilePath))
+            {
+                try
+                {
+                    string infoContent = File.ReadAllText(infoFilePath);
+                    using var doc = System.Text.Json.JsonDocument.Parse(infoContent);
+                    if (doc.RootElement.TryGetProperty("version", out var verElem))
+                    {
+                        existingVersion = verElem.GetString();
+                    }
+                }
+                catch { }
+            }
+
+            // Prompt user for version number
+            var versionDialog = new ContentDialog
+            {
+                Title = "Publish Workspace - Version Number",
+                PrimaryButtonText = "Continue",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            var sp = new StackPanel { Spacing = 10, Width = 380 };
+            sp.Children.Add(new TextBlock
+            {
+                Text = "Enter a new version number for publishing this workspace (e.g. 0.0.7.5). It will be recorded in WORKSPACE_INFO.json and included in the exported archive.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12
+            });
+
+            if (!string.IsNullOrWhiteSpace(existingVersion))
+            {
+                sp.Children.Add(new TextBlock
+                {
+                    Text = $"Existing workspace version: {existingVersion}",
+                    FontSize = 11,
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                });
+            }
+
+            var versionBox = new TextBox
+            {
+                PlaceholderText = "e.g. 0.0.7.5",
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            sp.Children.Add(versionBox);
+
+            var errorBlock = new TextBlock
+            {
+                Visibility = Visibility.Collapsed,
+                Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap
+            };
+            sp.Children.Add(errorBlock);
+
+            versionDialog.Content = sp;
+
+            string validatedVersion = string.Empty;
+
+            versionDialog.PrimaryButtonClick += (s, args) =>
+            {
+                string input = versionBox.Text.Trim();
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    args.Cancel = true;
+                    errorBlock.Text = "Version number cannot be empty.";
+                    errorBlock.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                if (!System.Text.RegularExpressions.Regex.IsMatch(input, @"^[a-zA-Z0-9.\-_+]+$") || !System.Text.RegularExpressions.Regex.IsMatch(input, @"\d"))
+                {
+                    args.Cancel = true;
+                    errorBlock.Text = "Please enter a valid version string containing numbers (e.g. 0.0.7.5).";
+                    errorBlock.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(existingVersion))
+                {
+                    if (string.Equals(input, existingVersion, StringComparison.OrdinalIgnoreCase) ||
+                        AppUpdateService.CompareVersions(input, existingVersion) == 0)
+                    {
+                        args.Cancel = true;
+                        errorBlock.Text = $"Version '{input}' already matches the existing version ({existingVersion}). Please enter a new, unique version number.";
+                        errorBlock.Visibility = Visibility.Visible;
+                        return;
+                    }
+                }
+
+                validatedVersion = input;
+            };
+
+            var dialogResult = await versionDialog.ShowAsync();
+            if (dialogResult != ContentDialogResult.Primary || string.IsNullOrWhiteSpace(validatedVersion))
+            {
+                return; // User cancelled
+            }
+
+            // Create/overwrite WORKSPACE_INFO.json in the root of the active workspace
+            try
+            {
+                var workspaceInfo = new Dictionary<string, object>
+                {
+                    ["version"] = validatedVersion,
+                    ["exported_at"] = DateTime.UtcNow.ToString("o")
+                };
+
+                string jsonContent = System.Text.Json.JsonSerializer.Serialize(workspaceInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(infoFilePath, jsonContent);
+
+                // Refresh workspace tree to display WORKSPACE_INFO.json
+                RefreshWorkspaceFiles();
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Failed to write WORKSPACE_INFO.json: {ex.Message}", InfoBarSeverity.Error);
+                return;
+            }
+
+            string defaultName = Path.GetFileName(_activeWorkspaceDir);
+            if (string.IsNullOrWhiteSpace(defaultName)) defaultName = "Workspace";
+            string cleanVer = validatedVersion.TrimStart('v', 'V');
+            defaultName = $"{defaultName}-v{cleanVer}.zip";
+
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileSavePicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeChoices.Add("Zip Archive", new List<string> { ".zip" });
+                picker.SuggestedFileName = defaultName;
+
+                IntPtr hwnd = WindowNative.GetWindowHandle(this);
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var file = await picker.PickSaveFileAsync();
+                if (file != null)
+                {
+                    ExportWorkspaceToZip(file.Path);
+                }
+            }
+            catch (Exception)
+            {
+                await ShowManualPathDialog("Export Workspace as .zip", false, path =>
+                {
+                    if (!path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) path += ".zip";
+                    ExportWorkspaceToZip(path);
+                });
+            }
+        }
+
+        private void ExportWorkspaceToZip(string destinationZipPath)
+        {
+            if (string.IsNullOrEmpty(_activeWorkspaceDir) || !Directory.Exists(_activeWorkspaceDir)) return;
+
+            try
+            {
+                if (File.Exists(destinationZipPath))
+                {
+                    File.Delete(destinationZipPath);
+                }
+
+                // Ensure WORKSPACE_INFO.json exists in workspace root before compression
+                string infoFile = Path.Combine(_activeWorkspaceDir, "WORKSPACE_INFO.json");
+                if (!File.Exists(infoFile))
+                {
+                    var defaultInfo = new Dictionary<string, object>
+                    {
+                        ["version"] = "0.0.7.5",
+                        ["exported_at"] = DateTime.UtcNow.ToString("o")
+                    };
+                    File.WriteAllText(infoFile, System.Text.Json.JsonSerializer.Serialize(defaultInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                }
+
+                System.IO.Compression.ZipFile.CreateFromDirectory(_activeWorkspaceDir, destinationZipPath, System.IO.Compression.CompressionLevel.Optimal, false);
+                ShowStatus($"Workspace exported successfully: {Path.GetFileName(destinationZipPath)} (includes WORKSPACE_INFO.json)", InfoBarSeverity.Success);
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Failed to export workspace: {ex.Message}", InfoBarSeverity.Error);
+            }
+        }
+
+        private async void OnOpenZipWorkspaceClicked(object sender, RoutedEventArgs e)
+        {
+            if (_hasUnsavedChanges)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Unsaved Changes",
+                    Content = "You have unsaved changes in the current file. Do you want to save before opening a new workspace?",
+                    PrimaryButtonText = "Save",
+                    SecondaryButtonText = "Don't Save",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.Content.XamlRoot
+                };
+
+                var res = await dialog.ShowAsync();
+                if (res == ContentDialogResult.Primary)
+                {
+                    OnSaveJsonClicked(null!, null!);
+                }
+                else if (res == ContentDialogResult.None)
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileOpenPicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeFilter.Add(".zip");
+
+                IntPtr hwnd = WindowNative.GetWindowHandle(this);
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var file = await picker.PickSingleFileAsync();
+                if (file != null)
+                {
+                    UnzipAndOpenWorkspace(file.Path);
+                }
+            }
+            catch (Exception)
+            {
+                await ShowManualPathDialog("Open Compressed Workspace (.zip)", false, path =>
+                {
+                    UnzipAndOpenWorkspace(path);
+                });
+            }
+        }
+
+        private void UnzipAndOpenWorkspace(string zipPath)
+        {
+            if (!File.Exists(zipPath))
+            {
+                ShowStatus($"Zip file not found: {zipPath}", InfoBarSeverity.Error);
+                return;
+            }
+
+            try
+            {
+                string? zipDir = Path.GetDirectoryName(zipPath);
+                if (string.IsNullOrEmpty(zipDir))
+                {
+                    zipDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                }
+
+                string folderName = Path.GetFileNameWithoutExtension(zipPath);
+                string targetDir = Path.Combine(zipDir, folderName);
+
+                Directory.CreateDirectory(targetDir);
+                string destinationRoot = Path.GetFullPath(targetDir);
+                if (!destinationRoot.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                {
+                    destinationRoot += Path.DirectorySeparatorChar;
+                }
+
+                // Safe Zip extraction with Zip Slip guard
+                using (var archive = System.IO.Compression.ZipFile.OpenRead(zipPath))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        string entryDestination = Path.GetFullPath(Path.Combine(destinationRoot, entry.FullName));
+                        if (!entryDestination.StartsWith(destinationRoot, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidOperationException("Zip Slip detected in archive.");
+                        }
+
+                        if (string.IsNullOrEmpty(entry.Name))
+                        {
+                            Directory.CreateDirectory(entryDestination);
+                            continue;
+                        }
+
+                        string? parent = Path.GetDirectoryName(entryDestination);
+                        if (!string.IsNullOrEmpty(parent))
+                        {
+                            Directory.CreateDirectory(parent);
+                        }
+
+                        using (var entryStream = entry.Open())
+                        using (var fileStream = new FileStream(entryDestination, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            entryStream.CopyTo(fileStream);
+                        }
+                    }
+                }
+
+                ClearCurrentPreview();
+                OpenWorkspace(targetDir);
+                ShowStatus($"Extracted and opened workspace: {folderName}", InfoBarSeverity.Success);
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Failed to open compressed workspace: {ex.Message}", InfoBarSeverity.Error);
+            }
+        }
+
         private async System.Threading.Tasks.Task PromptForDirectoryAndOpenWorkspace(string title)
         {
             if (_hasUnsavedChanges)
@@ -1883,7 +2289,14 @@ namespace TableLamp.Views
                 await ShowManualPathDialog(title, true, dir =>
                 {
                     ClearCurrentPreview();
-                    OpenWorkspace(dir);
+                    if (dir.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        UnzipAndOpenWorkspace(dir);
+                    }
+                    else
+                    {
+                        OpenWorkspace(dir);
+                    }
                 });
             }
         }
@@ -1900,7 +2313,27 @@ namespace TableLamp.Views
             WorkspaceCard.Visibility = Visibility.Visible;
             AppSettingsService.Instance.LastWorkspacePath = directoryPath;
             _workspaceDb.ScanWorkspace(directoryPath);
-            RefreshWorkspaceFiles();
+
+            var firstFile = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (firstFile != null && string.IsNullOrEmpty(_activeFilePath))
+            {
+                _activeFilePath = firstFile;
+                string? dirCursor = Path.GetDirectoryName(firstFile);
+                while (!string.IsNullOrEmpty(dirCursor) && dirCursor.Length >= directoryPath.Length)
+                {
+                    _expandedWorkspaceFolders.Add(dirCursor);
+                    if (string.Equals(dirCursor, directoryPath, StringComparison.OrdinalIgnoreCase))
+                        break;
+                    dirCursor = Path.GetDirectoryName(dirCursor);
+                }
+                RefreshWorkspaceFiles();
+                LoadJsonFile(firstFile);
+            }
+            else
+            {
+                RefreshWorkspaceFiles();
+            }
+
             ShowStatus($"Workspace opened: {directoryPath}", InfoBarSeverity.Success);
         }
 
@@ -1910,6 +2343,7 @@ namespace TableLamp.Views
             WorkspaceCard.Visibility = Visibility.Collapsed;
             AppSettingsService.Instance.LastWorkspacePath = null;
             AppSettingsService.Instance.LastOpenedJsonPath = null;
+            ClearWorkspaceSelection();
             ClearCurrentPreview();
         }
 
@@ -1936,19 +2370,27 @@ namespace TableLamp.Views
                 {
                     string folderName = Path.GetFileName(subDir);
                     bool isExpanded = _expandedWorkspaceFolders.Contains(subDir);
+                    bool isSelectedFolder = string.Equals(_selectedWorkspaceItemPath, subDir, StringComparison.OrdinalIgnoreCase);
 
                     var folderRow = new Border
                     {
                         CornerRadius = new CornerRadius(6),
                         Padding = new Thickness(4, 3, 6, 3),
                         Margin = new Thickness(depth * 14, 1, 0, 1),
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        IsHitTestVisible = true
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        IsHitTestVisible = true,
+                        BorderThickness = new Thickness(1),
+                        BorderBrush = isSelectedFolder ? GetDarkerAccentBrush() : new SolidColorBrush(Microsoft.UI.Colors.Transparent)
                     };
 
                     if (Application.Current.Resources.TryGetValue("SubtleFillColorTransparentBrush", out object? trans) && trans is Brush tb)
                     {
                         folderRow.Background = tb;
+                    }
+
+                    if (isSelectedFolder)
+                    {
+                        _selectedWorkspaceRowBorder = folderRow;
                     }
 
                     var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
@@ -1979,13 +2421,56 @@ namespace TableLamp.Views
                         Text = folderName,
                         FontSize = 12,
                         FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        TextTrimming = TextTrimming.CharacterEllipsis
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+
+                    var addJsonBtn = new Button
+                    {
+                        Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                        Padding = new Thickness(2),
+                        Width = 20,
+                        Height = 20,
+                        Margin = new Thickness(2, 0, 0, 0),
+                        Content = new FontIcon
+                        {
+                            Glyph = "\uE710",
+                            FontSize = 10,
+                            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                        }
+                    };
+                    ToolTipService.SetToolTip(addJsonBtn, "Add new JSON file inside this folder");
+                    addJsonBtn.Click += (s, e) =>
+                    {
+                        ClearWorkspaceSelection();
+                        PromptNewJsonInsideFolder(subDir);
+                    };
+
+                    var addFolderBtn = new Button
+                    {
+                        Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
+                        Padding = new Thickness(2),
+                        Width = 20,
+                        Height = 20,
+                        Margin = new Thickness(2, 0, 0, 0),
+                        Content = new FontIcon
+                        {
+                            Glyph = "\uE8F7",
+                            FontSize = 10,
+                            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                        }
+                    };
+                    ToolTipService.SetToolTip(addFolderBtn, "Add new subfolder inside this folder");
+                    addFolderBtn.Click += (s, e) =>
+                    {
+                        ClearWorkspaceSelection();
+                        PromptNewFolderInsideFolder(subDir);
                     };
 
                     sp.Children.Add(chevronButton);
                     sp.Children.Add(folderIcon);
                     sp.Children.Add(nameBlock);
+                    sp.Children.Add(addJsonBtn);
+                    sp.Children.Add(addFolderBtn);
                     folderRow.Child = sp;
 
                     container.Children.Add(folderRow);
@@ -2017,8 +2502,49 @@ namespace TableLamp.Views
                         RefreshWorkspaceFiles();
                     }
 
-                    chevronButton.Click += (s, e) => ToggleFolder();
-                    folderRow.Tapped += (s, e) => ToggleFolder();
+                    chevronButton.Click += (s, e) =>
+                    {
+                        ClearWorkspaceSelection();
+                        ToggleFolder();
+                    };
+                    folderRow.Tapped += (s, e) =>
+                    {
+                        ClearWorkspaceSelection();
+                        ToggleFolder();
+                    };
+
+                    // Right click: if already selected, clear selection border; otherwise select
+                    folderRow.RightTapped += (s, e) =>
+                    {
+                        e.Handled = true;
+                        if (string.Equals(_selectedWorkspaceItemPath, subDir, StringComparison.OrdinalIgnoreCase))
+                        {
+                            ClearWorkspaceSelection();
+                            return;
+                        }
+
+                        SelectWorkspaceItem(folderRow, subDir, isFolder: true);
+
+                        var flyout = new MenuFlyout();
+                        var newJsonItem = new MenuFlyoutItem
+                        {
+                            Text = "New JSON File Here...",
+                            Icon = new FontIcon { Glyph = "\uE7C3" }
+                        };
+                        newJsonItem.Click += (fs, fe) => PromptNewJsonInsideFolder(subDir);
+
+                        var newFolderItem = new MenuFlyoutItem
+                        {
+                            Text = "New Subfolder Here...",
+                            Icon = new FontIcon { Glyph = "\uE8F7" }
+                        };
+                        newFolderItem.Click += (fs, fe) => PromptNewFolderInsideFolder(subDir);
+
+                        flyout.Items.Add(newJsonItem);
+                        flyout.Items.Add(newFolderItem);
+
+                        flyout.ShowAt(folderRow, e.GetPosition(folderRow));
+                    };
                 }
             }
             catch { }
@@ -2031,14 +2557,17 @@ namespace TableLamp.Views
                 {
                     string fileName = Path.GetFileName(file);
                     bool isActive = string.Equals(_activeFilePath, file, StringComparison.OrdinalIgnoreCase);
+                    bool isSelectedFile = string.Equals(_selectedWorkspaceItemPath, file, StringComparison.OrdinalIgnoreCase);
 
                     var fileRow = new Border
                     {
                         CornerRadius = new CornerRadius(6),
                         Padding = new Thickness(6, 4, 8, 4),
                         Margin = new Thickness(depth * 14 + (depth > 0 ? 8 : 4), 1, 0, 1),
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        IsHitTestVisible = true
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        IsHitTestVisible = true,
+                        BorderThickness = new Thickness(1),
+                        BorderBrush = isSelectedFile ? GetDarkerAccentBrush() : new SolidColorBrush(Microsoft.UI.Colors.Transparent)
                     };
 
                     if (isActive)
@@ -2054,6 +2583,11 @@ namespace TableLamp.Views
                         {
                             fileRow.Background = lb;
                         }
+                    }
+
+                    if (isSelectedFile)
+                    {
+                        _selectedWorkspaceRowBorder = fileRow;
                     }
 
                     var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -2072,18 +2606,46 @@ namespace TableLamp.Views
                         FontSize = 12,
                         Foreground = isActive ? new SolidColorBrush(Microsoft.UI.Colors.White)
                                               : (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"],
-                        VerticalAlignment = VerticalAlignment.Center,
-                        TextTrimming = TextTrimming.CharacterEllipsis
+                        VerticalAlignment = VerticalAlignment.Center
                     };
 
                     sp.Children.Add(fileIcon);
                     sp.Children.Add(nameBlock);
                     fileRow.Child = sp;
 
+                    // Left click opens in Simplified view
                     fileRow.Tapped += (s, e) =>
                     {
+                        ClearWorkspaceSelection();
                         LoadJsonFile(file);
                         RefreshWorkspaceFiles();
+                    };
+
+                    // Right click: if already selected, clear selection border; otherwise select
+                    fileRow.RightTapped += (s, e) =>
+                    {
+                        e.Handled = true;
+                        if (string.Equals(_selectedWorkspaceItemPath, file, StringComparison.OrdinalIgnoreCase))
+                        {
+                            ClearWorkspaceSelection();
+                            return;
+                        }
+
+                        SelectWorkspaceItem(fileRow, file, isFolder: false);
+
+                        var flyout = new MenuFlyout();
+                        var deleteItem = new MenuFlyoutItem
+                        {
+                            Text = $"Delete '{fileName}'",
+                            Icon = new FontIcon { Glyph = "\uE74D" }
+                        };
+                        deleteItem.Click += async (fs, fe) =>
+                        {
+                            await ConfirmAndDeleteWorkspaceItem(file, isFolder: false);
+                        };
+
+                        flyout.Items.Add(deleteItem);
+                        flyout.ShowAt(fileRow, e.GetPosition(fileRow));
                     };
 
                     container.Children.Add(fileRow);
@@ -2092,18 +2654,137 @@ namespace TableLamp.Views
             catch { }
         }
 
-        private async void OnNewJsonFileClicked(object sender, RoutedEventArgs e)
+        private void LoadJsonFileJsonViewOnly(string filePath)
         {
-            var textBox = new TextBox { PlaceholderText = "chapter_topics.json", Width = 300 };
+            LoadJsonFile(filePath);
+        }
+
+        private static Brush GetDarkerAccentBrush()
+        {
+            if (Application.Current.Resources.TryGetValue("SystemAccentColorDark1", out object? d1) && d1 is Windows.UI.Color c1)
+            {
+                return new SolidColorBrush(c1);
+            }
+            if (Application.Current.Resources.TryGetValue("SystemAccentColor", out object? sc) && sc is Windows.UI.Color c)
+            {
+                byte r = (byte)(c.R * 0.7);
+                byte g = (byte)(c.G * 0.7);
+                byte b = (byte)(c.B * 0.7);
+                return new SolidColorBrush(Windows.UI.Color.FromArgb(c.A, r, g, b));
+            }
+            return new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 95, 184));
+        }
+
+        private void SelectWorkspaceItem(Border rowBorder, string path, bool isFolder)
+        {
+            ClearWorkspaceSelectionHighlight();
+
+            _selectedWorkspaceItemPath = path;
+            _selectedWorkspaceItemIsFolder = isFolder;
+            _selectedWorkspaceRowBorder = rowBorder;
+
+            rowBorder.BorderBrush = GetDarkerAccentBrush();
+            rowBorder.BorderThickness = new Thickness(1);
+        }
+
+        private void ClearWorkspaceSelectionHighlight()
+        {
+            if (_selectedWorkspaceRowBorder != null)
+            {
+                _selectedWorkspaceRowBorder.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+                _selectedWorkspaceRowBorder.BorderThickness = new Thickness(1);
+                _selectedWorkspaceRowBorder = null;
+            }
+        }
+
+        private void ClearWorkspaceSelection()
+        {
+            ClearWorkspaceSelectionHighlight();
+            _selectedWorkspaceItemPath = null;
+            _selectedWorkspaceItemIsFolder = false;
+        }
+
+        private async void OnDeleteWorkspaceItemClicked(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedWorkspaceItemPath)) return;
+            await ConfirmAndDeleteWorkspaceItem(_selectedWorkspaceItemPath, _selectedWorkspaceItemIsFolder);
+        }
+
+        private async System.Threading.Tasks.Task ConfirmAndDeleteWorkspaceItem(string path, bool isFolder)
+        {
+            string itemName = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(itemName)) itemName = path;
+
+            string dialogTitle = isFolder ? "Delete Folder" : "Delete JSON File";
+            string dialogMessage = isFolder
+                ? $"Are you sure you want to permanently delete the folder '{itemName}' and all of its contents? This action cannot be undone."
+                : $"Are you sure you want to permanently delete '{itemName}'? This action cannot be undone.";
+
             var dialog = new ContentDialog
             {
-                Title = "New JSON File",
+                Title = dialogTitle,
+                Content = dialogMessage,
+                PrimaryButtonText = "Delete",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            var res = await dialog.ShowAsync();
+            if (res == ContentDialogResult.Primary)
+            {
+                try
+                {
+                    if (isFolder)
+                    {
+                        if (Directory.Exists(path))
+                        {
+                            Directory.Delete(path, true);
+                        }
+                    }
+                    else
+                    {
+                        if (File.Exists(path))
+                        {
+                            File.Delete(path);
+                        }
+                    }
+
+                    // If active file was inside deleted folder or was the deleted file, clear preview
+                    if (!string.IsNullOrEmpty(_activeFilePath))
+                    {
+                        if (string.Equals(_activeFilePath, path, StringComparison.OrdinalIgnoreCase) ||
+                            (isFolder && _activeFilePath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            ClearCurrentPreview();
+                        }
+                    }
+
+                    ClearWorkspaceSelection();
+                    RefreshWorkspaceFiles();
+                    ShowStatus($"Deleted {(isFolder ? "folder" : "file")}: {itemName}", InfoBarSeverity.Success);
+                }
+                catch (Exception ex)
+                {
+                    ShowStatus($"Error deleting {(isFolder ? "folder" : "file")}: {ex.Message}", InfoBarSeverity.Error);
+                }
+            }
+        }
+
+        private async void PromptNewJsonInsideFolder(string targetDir)
+        {
+            if (!Directory.Exists(targetDir)) return;
+
+            var textBox = new TextBox { PlaceholderText = "chapter_topics", Width = 300 };
+            var dialog = new ContentDialog
+            {
+                Title = $"New JSON File in '{Path.GetFileName(targetDir)}'",
                 Content = new StackPanel
                 {
                     Spacing = 8,
                     Children =
                     {
-                        new TextBlock { Text = "Enter file name:" },
+                        new TextBlock { Text = "Enter file name (.json is added automatically):" },
                         textBox
                     }
                 },
@@ -2114,8 +2795,84 @@ namespace TableLamp.Views
 
             if (await dialog.ShowAsync() == ContentDialogResult.Primary)
             {
+                ClearWorkspaceSelection();
                 string name = textBox.Text.Trim();
-                if (string.IsNullOrEmpty(name)) name = "new_presets.json";
+                if (string.IsNullOrEmpty(name)) name = "new_presets";
+                if (!name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) name += ".json";
+
+                string fullPath = Path.Combine(targetDir, name);
+                string starter = _generator.CreateBlankSubjectPresetJson();
+                File.WriteAllText(fullPath, starter);
+
+                _expandedWorkspaceFolders.Add(targetDir);
+                _activeFilePath = fullPath;
+                RefreshWorkspaceFiles();
+                LoadJsonFile(fullPath);
+            }
+        }
+
+        private async void PromptNewFolderInsideFolder(string targetDir)
+        {
+            if (!Directory.Exists(targetDir)) return;
+
+            var textBox = new TextBox { PlaceholderText = "SubFolder", Width = 300 };
+            var dialog = new ContentDialog
+            {
+                Title = $"New Folder in '{Path.GetFileName(targetDir)}'",
+                Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = "Enter folder name:" },
+                        textBox
+                    }
+                },
+                PrimaryButtonText = "Create",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                ClearWorkspaceSelection();
+                string name = textBox.Text.Trim();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    string path = Path.Combine(targetDir, name);
+                    Directory.CreateDirectory(path);
+                    _expandedWorkspaceFolders.Add(targetDir);
+                    RefreshWorkspaceFiles();
+                    ShowStatus($"Created folder: {name}", InfoBarSeverity.Success);
+                }
+            }
+        }
+
+        private async void OnNewJsonFileClicked(object sender, RoutedEventArgs e)
+        {
+            var textBox = new TextBox { PlaceholderText = "chapter_topics", Width = 300 };
+            var dialog = new ContentDialog
+            {
+                Title = "New JSON File",
+                Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = "Enter file name (.json is added automatically):" },
+                        textBox
+                    }
+                },
+                PrimaryButtonText = "Create",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                ClearWorkspaceSelection();
+                string name = textBox.Text.Trim();
+                if (string.IsNullOrEmpty(name)) name = "new_presets";
                 if (!name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) name += ".json";
 
                 string targetDir = _activeWorkspaceDir ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -2124,6 +2881,7 @@ namespace TableLamp.Views
                 // Create a blank JSON with only a dummy subject field (no chapters/topics)
                 string starter = _generator.CreateBlankSubjectPresetJson();
                 File.WriteAllText(fullPath, starter);
+                _activeFilePath = fullPath;
                 RefreshWorkspaceFiles();
                 LoadJsonFile(fullPath);
             }
@@ -2153,6 +2911,7 @@ namespace TableLamp.Views
 
             if (await dialog.ShowAsync() == ContentDialogResult.Primary)
             {
+                ClearWorkspaceSelection();
                 string name = textBox.Text.Trim();
                 if (!string.IsNullOrEmpty(name))
                 {

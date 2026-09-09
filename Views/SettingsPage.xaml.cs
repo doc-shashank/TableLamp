@@ -22,8 +22,10 @@ namespace TableLamp.Views
 
             ImportJsonFilesButton.Click += OnImportJsonFilesClicked;
             ImportFolderButton.Click += OnImportFolderClicked;
-            FormatDatabaseButton.Click += OnFormatDatabaseClicked;
-            RestoreStartersButton.Click += OnRestoreStartersClicked;
+            ImportZipArchiveButton.Click += OnImportZipArchiveClicked;
+            FormatCuratedDatabaseButton.Click += OnFormatCuratedDatabaseClicked;
+            FormatCustomDatabaseButton.Click += OnFormatCustomDatabaseClicked;
+            FormatAllDatabasesButton.Click += OnFormatAllDatabasesClicked;
             CheckForUpdatesButton.Click += OnCheckForUpdatesClicked;
             UpdateCuratedPresetsButton.Click += OnUpdateCuratedPresetsClicked;
 
@@ -75,8 +77,15 @@ namespace TableLamp.Views
                 var result = await CuratedContentUpdateService.DownloadAndApplyUpdateAsync();
                 if (result.Success)
                 {
-                    NotificationCard.Show($"Curated tags updated to {result.VersionApplied}! {result.FilesImported} file(s) merged into Curated Database.", InfoBarSeverity.Success);
-                    RefreshStats();
+                    if (result.AlreadyUpToDate)
+                    {
+                        NotificationCard.Show($"Curated tags are already on the latest version ({result.VersionApplied}).", InfoBarSeverity.Informational);
+                    }
+                    else
+                    {
+                        NotificationCard.Show($"Curated tags updated to {result.VersionApplied}! {result.FilesImported} file(s) merged into Curated Database.", InfoBarSeverity.Success);
+                        RefreshStats();
+                    }
                 }
                 else
                 {
@@ -155,6 +164,17 @@ namespace TableLamp.Views
             curatedGrid.Children.Add(CreateMetricCard("Chapters", curatedDb.ChapterCount.ToString(), 1));
             curatedGrid.Children.Add(CreateMetricCard("Topics", curatedDb.TopicCount.ToString(), 2));
             contentPanel.Children.Add(curatedGrid);
+
+            if (curatedDb.IsEmpty)
+            {
+                contentPanel.Children.Add(new InfoBar
+                {
+                    IsOpen = true,
+                    Severity = InfoBarSeverity.Informational,
+                    IsClosable = false,
+                    Message = "Curated database is currently empty. Download the latest curated tags from the GitHub repository via Launcher Settings."
+                });
+            }
 
             contentPanel.Children.Add(new TextBlock
             {
@@ -355,13 +375,85 @@ namespace TableLamp.Views
             }
         }
 
-        private async void OnFormatDatabaseClicked(object sender, RoutedEventArgs e)
+        private async void OnImportZipArchiveClicked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileOpenPicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeFilter.Add(".zip");
+
+                IntPtr hwnd = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+                InitializeWithWindow.Initialize(picker, hwnd);
+
+                var file = await picker.PickSingleFileAsync();
+                if (file != null)
+                {
+                    var (total, success, failed) = CustomPresetTagDatabase.Instance.ImportZipArchive(file.Path);
+                    ShowStatus($"Archive import complete: Found {total} JSON files. Successfully merged {success} into custom database ({failed} failed).",
+                        success > 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning);
+                    RefreshStats();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Error importing zip archive: {ex.Message}", InfoBarSeverity.Error);
+                return;
+            }
+
+            ShowStatus("No zip archive was selected.", InfoBarSeverity.Informational);
+        }
+
+        private async void OnFormatCuratedDatabaseClicked(object sender, RoutedEventArgs e)
         {
             var confirmDialog = new ContentDialog
             {
-                Title = "Format Preset Databases?",
-                Content = "This will format and reset both Custom and Curated preset databases to start completely afresh. This action cannot be undone.",
-                PrimaryButtonText = "Format Databases",
+                Title = "Format Curated Tags Database?",
+                Content = "This will format and clear all curated presets to an empty state. Custom tags will remain untouched. Curated presets can be re-synced from GitHub at any time.",
+                PrimaryButtonText = "Format Curated Tags",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await confirmDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                PresetTagDatabase.Instance.FormatDatabase();
+                ShowStatus("Curated tags database formatted and reset to empty state.", InfoBarSeverity.Warning);
+                RefreshStats();
+            }
+        }
+
+        private async void OnFormatCustomDatabaseClicked(object sender, RoutedEventArgs e)
+        {
+            var confirmDialog = new ContentDialog
+            {
+                Title = "Format Custom Tags Database?",
+                Content = "This will format and delete all custom presets you have imported or created. Curated tags will remain untouched. This action cannot be undone.",
+                PrimaryButtonText = "Format Custom Tags",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await confirmDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                CustomPresetTagDatabase.Instance.FormatDatabase();
+                ShowStatus("Custom tags database formatted and reset to empty state.", InfoBarSeverity.Warning);
+                RefreshStats();
+            }
+        }
+
+        private async void OnFormatAllDatabasesClicked(object sender, RoutedEventArgs e)
+        {
+            var confirmDialog = new ContentDialog
+            {
+                Title = "Format Both Preset Databases?",
+                Content = "This will format and reset BOTH Curated and Custom preset databases to start completely afresh. This action cannot be undone.",
+                PrimaryButtonText = "Format Both Databases",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = this.XamlRoot
@@ -372,27 +464,7 @@ namespace TableLamp.Views
             {
                 CustomPresetTagDatabase.Instance.FormatDatabase();
                 PresetTagDatabase.Instance.FormatDatabase();
-                ShowStatus("Databases formatted and reset to empty state.", InfoBarSeverity.Warning);
-                RefreshStats();
-            }
-        }
-
-        private async void OnRestoreStartersClicked(object sender, RoutedEventArgs e)
-        {
-            var confirmDialog = new ContentDialog
-            {
-                Title = "Restore Starter Presets?",
-                Content = "This will replace current presets with canonical starter presets (Robins Physiology & Guyton Medical Physiology).",
-                PrimaryButtonText = "Restore",
-                CloseButtonText = "Cancel",
-                XamlRoot = this.XamlRoot
-            };
-
-            var result = await confirmDialog.ShowAsync();
-            if (result == ContentDialogResult.Primary)
-            {
-                PresetTagDatabase.Instance.ResetToStarterPresets();
-                ShowStatus("Canonical starter presets restored successfully.", InfoBarSeverity.Success);
+                ShowStatus("Both Curated and Custom databases formatted and reset to empty state.", InfoBarSeverity.Warning);
                 RefreshStats();
             }
         }

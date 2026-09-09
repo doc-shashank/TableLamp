@@ -173,9 +173,10 @@ namespace TableLamp.Tests
         [Fact]
         public void CustomTagService_MaintainsDistinction_BetweenCuratedAndCustomSubjects()
         {
+            PresetTagDatabase.Instance.ReloadFromJson(new PresetTagGenerator().CreateStarterPresetJson());
             var service = CustomTagService.Instance;
 
-            // Curated starter subjects should be recognized
+            // Curated subjects should be recognized
             Assert.True(service.IsCuratedSubject("Robins Physiology"));
             Assert.True(service.IsCuratedSubject("Guyton Medical Physiology"));
 

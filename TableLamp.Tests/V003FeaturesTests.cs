@@ -108,6 +108,7 @@ namespace TableLamp.Tests
         {
             var db = new PresetTagDatabase();
             db.InitializeDatabase();
+            db.ReloadFromJson(new PresetTagGenerator().CreateStarterPresetJson());
 
             var search = db.Search(105, 110);
             Assert.NotEmpty(search);

@@ -1,11 +1,14 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using TableLamp.Services;
 using WinRT.Interop;
 
 namespace TableLamp.Views
@@ -21,6 +24,14 @@ namespace TableLamp.Views
     {
         private AppWindow? _appWindow;
 
+        private string? _appUpdateDownloadUrl;
+        private string? _appUpdateLatestTag;
+        private bool _isAppDownloading;
+        private string? _downloadedInstallerPath;
+
+        private string? _curatedUpdateTag;
+        private bool _isCuratedDownloading;
+
         public TableLampLauncher()
         {
             this.InitializeComponent();
@@ -28,6 +39,145 @@ namespace TableLamp.Views
             ConfigureLauncherWindow();
             WireCardMouseEvents();
             WireCaptionButtons();
+            InitializeUpdateNotifications();
+        }
+
+        private void InitializeUpdateNotifications()
+        {
+            AppUpdateNotificationBtn.Click += OnAppUpdateNotificationClicked;
+            CuratedUpdateNotificationBtn.Click += OnCuratedUpdateNotificationClicked;
+            _ = CheckAvailableUpdatesAsync();
+        }
+
+        private async Task CheckAvailableUpdatesAsync()
+        {
+            try
+            {
+                // 1. Check App update
+                var appCheck = await AppUpdateService.CheckForUpdatesAsync();
+                if (appCheck.Success && appCheck.IsUpdateAvailable)
+                {
+                    _appUpdateDownloadUrl = appCheck.DownloadUrl;
+                    _appUpdateLatestTag = appCheck.LatestVersion;
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        AppUpdateNotificationText.Text = $"App {appCheck.LatestVersion}: Update Available (Click to Download)";
+                        AppUpdateNotificationBtn.Visibility = Visibility.Visible;
+                    });
+                }
+
+                // 2. Check Curated tags update
+                var curatedCheck = await CuratedContentUpdateService.CheckForUpdatesAsync();
+                if (curatedCheck.Success && curatedCheck.IsUpdateAvailable)
+                {
+                    _curatedUpdateTag = curatedCheck.LatestVersion;
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        CuratedUpdateNotificationText.Text = $"Curated Tags {curatedCheck.LatestVersion}: Update Available (Click to Download)";
+                        CuratedUpdateNotificationBtn.Visibility = Visibility.Visible;
+                    });
+                }
+            }
+            catch
+            {
+                // Non-fatal if offline
+            }
+        }
+
+        private async void OnCuratedUpdateNotificationClicked(object sender, RoutedEventArgs e)
+        {
+            if (_isCuratedDownloading) return;
+            _isCuratedDownloading = true;
+            CuratedUpdateNotificationBtn.IsEnabled = false;
+
+            string tag = _curatedUpdateTag ?? "latest";
+            CuratedUpdateNotificationText.Text = $"Curated Tags {tag}: Downloading...0%";
+
+            var progress = new Progress<double>(pct =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    CuratedUpdateNotificationText.Text = $"Curated Tags {tag}: Downloading...{(int)pct}%";
+                });
+            });
+
+            try
+            {
+                var result = await CuratedContentUpdateService.DownloadAndApplyUpdateAsync(releaseTag: _curatedUpdateTag, progress: progress);
+                if (result.Success)
+                {
+                    CuratedUpdateNotificationText.Text = $"Curated Tags {result.VersionApplied}: Updated successfully";
+                }
+                else
+                {
+                    CuratedUpdateNotificationText.Text = $"Curated Tags: Sync failed - {result.ErrorMessage}";
+                    CuratedUpdateNotificationBtn.IsEnabled = true;
+                    _isCuratedDownloading = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                CuratedUpdateNotificationText.Text = $"Curated Tags: Error - {ex.Message}";
+                CuratedUpdateNotificationBtn.IsEnabled = true;
+                _isCuratedDownloading = false;
+            }
+        }
+
+        private async void OnAppUpdateNotificationClicked(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_downloadedInstallerPath) && File.Exists(_downloadedInstallerPath))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_downloadedInstallerPath) { UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    AppUpdateNotificationText.Text = $"Launch failed: {ex.Message}";
+                }
+                return;
+            }
+
+            if (_isAppDownloading || string.IsNullOrEmpty(_appUpdateDownloadUrl)) return;
+            _isAppDownloading = true;
+            AppUpdateNotificationBtn.IsEnabled = false;
+
+            string tag = _appUpdateLatestTag ?? "latest";
+            AppUpdateNotificationText.Text = $"App {tag}: Downloading...0%";
+
+            string installerPath = Path.Combine(Path.GetTempPath(), $"TableLamp-Setup-{tag}.exe");
+
+            var progress = new Progress<double>(pct =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    AppUpdateNotificationText.Text = $"App {tag}: Downloading...{(int)pct}%";
+                });
+            });
+
+            try
+            {
+                bool ok = await AppUpdateService.DownloadInstallerAsync(_appUpdateDownloadUrl, installerPath, progress);
+                if (ok && File.Exists(installerPath))
+                {
+                    _downloadedInstallerPath = installerPath;
+                    AppUpdateNotificationText.Text = $"App {tag}: Downloaded! Click to Install";
+                    AppUpdateNotificationBtn.IsEnabled = true;
+                    _isAppDownloading = false;
+                }
+                else
+                {
+                    AppUpdateNotificationText.Text = $"App {tag}: Download failed. Click to retry.";
+                    AppUpdateNotificationBtn.IsEnabled = true;
+                    _isAppDownloading = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppUpdateNotificationText.Text = $"App {tag}: Download error - {ex.Message}";
+                AppUpdateNotificationBtn.IsEnabled = true;
+                _isAppDownloading = false;
+            }
         }
 
         [DllImport("user32.dll")]
@@ -237,7 +387,7 @@ namespace TableLamp.Views
 
         public void ToggleLauncherSettings()
         {
-            if (LauncherSettingsFrame.Visibility == Visibility.Visible)
+            if (LauncherSettingsPresenter.Visibility == Visibility.Visible)
             {
                 HideLauncherSettings();
             }
@@ -253,16 +403,16 @@ namespace TableLamp.Views
             {
                 _settingsPage = new LauncherSettingsPage();
                 _settingsPage.BackRequested += HideLauncherSettings;
+                LauncherSettingsPresenter.Content = _settingsPage;
             }
 
-            LauncherSettingsFrame.Content = _settingsPage;
             LauncherModesContainer.Visibility = Visibility.Collapsed;
-            LauncherSettingsFrame.Visibility = Visibility.Visible;
+            LauncherSettingsPresenter.Visibility = Visibility.Visible;
         }
 
         public void HideLauncherSettings()
         {
-            LauncherSettingsFrame.Visibility = Visibility.Collapsed;
+            LauncherSettingsPresenter.Visibility = Visibility.Collapsed;
             LauncherModesContainer.Visibility = Visibility.Visible;
         }
 

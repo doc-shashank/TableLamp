@@ -51,6 +51,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Option A: Feed Multiple Files -->
@@ -59,21 +60,21 @@
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
                                     CornerRadius="10"
-                                    Padding="18">
-                                <StackPanel Spacing="12">
+                                    Padding="16">
+                                <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon Glyph="&#xE8A5;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Import JSON Files" FontWeight="SemiBold" FontSize="14" />
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Import JSON Files" FontWeight="SemiBold" FontSize="13" />
                                     </StackPanel>
-                                    <TextBlock Text="Select one or more JSON files from disk to parse and merge into the database."
-                                               FontSize="12"
+                                    <TextBlock Text="Select one or more JSON files from disk to parse and merge."
+                                               FontSize="11"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                     <Button x:Name="ImportJsonFilesButton"
-                                            Content="Browse &amp; Import Files..."
+                                            Content="Browse Files..."
                                             Style="{ThemeResource AccentButtonStyle}"
                                             HorizontalAlignment="Stretch"
-                                            Padding="14,8" />
+                                            Padding="12,6" />
                                 </StackPanel>
                             </Border>
 
@@ -83,21 +84,45 @@
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
                                     CornerRadius="10"
-                                    Padding="18">
-                                <StackPanel Spacing="12">
+                                    Padding="16">
+                                <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon Glyph="&#xED43;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Import Whole Folder" FontWeight="SemiBold" FontSize="14" />
+                                        <FontIcon Glyph="&#xED43;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Import Folder" FontWeight="SemiBold" FontSize="13" />
                                     </StackPanel>
-                                    <TextBlock Text="Recursively scans a directory for all .json files and feeds them all into the database."
-                                               FontSize="12"
+                                    <TextBlock Text="Recursively scans a directory for all .json files and feeds them in."
+                                               FontSize="11"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                TextWrapping="Wrap" />
                                     <Button x:Name="ImportFolderButton"
-                                            Content="Browse &amp; Import Folder..."
+                                            Content="Browse Folder..."
                                             Style="{ThemeResource AccentButtonStyle}"
                                             HorizontalAlignment="Stretch"
-                                            Padding="14,8" />
+                                            Padding="12,6" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Option C: Feed Compressed Archive (.zip) -->
+                            <Border Grid.Column="2"
+                                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="16">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xEDE1;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Import Archive (.zip)" FontWeight="SemiBold" FontSize="13" />
+                                    </StackPanel>
+                                    <TextBlock Text="Safely extracts a .zip archive and merges all .json presets into database."
+                                               FontSize="11"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <Button x:Name="ImportZipArchiveButton"
+                                            Content="Browse .zip..."
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            Padding="12,6" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -181,7 +206,7 @@
                             <StackPanel Spacing="2">
                                 <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="16" />
                                 <TextBlock x:Name="AppUpdatesVersionText"
-                                           Text="Check for the latest Table Lamp releases on GitHub. Current version: v0.0.7.0"
+                                           Text="Check for the latest Table Lamp releases on GitHub. Current version: v0.0.7.4"
                                            FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -209,25 +234,35 @@
                             </Border>
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Database Management &amp; Formatting" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock Text="Format the database to start completely afresh, or restore canonical starter presets." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="Format the curated and custom tag databases separately to start completely afresh." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
-                            <Button x:Name="FormatDatabaseButton"
+                            <Button x:Name="FormatCuratedDatabaseButton"
                                     Style="{ThemeResource SubtleButtonStyle}"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                    Padding="16,8">
+                                    Padding="14,8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                                    <TextBlock Text="Format Database (Reset to Empty)" FontWeight="SemiBold" />
+                                    <FontIcon Glyph="&#xE74D;" FontSize="13" />
+                                    <TextBlock Text="Format Curated Tags" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Button>
 
-                            <Button x:Name="RestoreStartersButton"
-                                    Content="Restore Starter Presets"
+                            <Button x:Name="FormatCustomDatabaseButton"
+                                    Style="{ThemeResource SubtleButtonStyle}"
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                    Padding="14,8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE74D;" FontSize="13" />
+                                    <TextBlock Text="Format Custom Tags" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="FormatAllDatabasesButton"
+                                    Content="Format Both Databases"
                                     Style="{ThemeResource DefaultButtonStyle}"
-                                    Padding="16,8" />
+                                    Padding="14,8" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

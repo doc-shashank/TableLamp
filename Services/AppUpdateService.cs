@@ -1,6 +1,10 @@
 using System;
+using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,33 +19,41 @@ namespace TableLamp.Services
         public string ReleaseTitle { get; set; } = string.Empty;
         public string ReleaseNotes { get; set; } = string.Empty;
         public string ReleaseUrl { get; set; } = string.Empty;
+        public string? DownloadUrl { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string? ErrorMessage { get; set; }
     }
 
     /// <summary>
-    /// Service responsible for checking application updates against GitHub Releases.
+    /// Service responsible for checking application updates against GitHub Releases
+    /// using zero-API web redirects (HTTP 302) to bypass REST API rate limits completely.
     /// </summary>
     public static class AppUpdateService
     {
         // =========================================================================
         // GITHUB REPOSITORY CONFIGURATION FOR APP UPDATES
-        // (Edit the owner and repository name below to target your GitHub repo)
         // =========================================================================
         public static string RepoOwner { get; set; } = "doc-shashank";
         public static string RepoName { get; set; } = "table-lamp";
 
-        public static readonly string CurrentVersionString = "0.0.7.0";
-        public static readonly Version CurrentVersion = new(0, 0, 7, 0);
+        public static readonly string CurrentVersionString = "0.0.7.5";
+        public static readonly Version CurrentVersion = new(0, 0, 7, 5);
 
-        private static readonly HttpClient DefaultHttpClient = new();
+        // Non-redirecting client to intercept the 302 redirect Location header without downloading pages
+        private static readonly HttpClient DefaultRedirectInterceptorClient;
+        private static readonly SemaphoreSlim CheckLock = new(1, 1);
+
+        // Strict tag format validator to prevent path traversal or URL manipulation attacks
+        private static readonly Regex SafeTagPattern = new(@"^[a-zA-Z0-9._\-+]+$", RegexOptions.Compiled);
 
         static AppUpdateService()
         {
-            if (!DefaultHttpClient.DefaultRequestHeaders.Contains("User-Agent"))
+            var handler = new HttpClientHandler
             {
-                DefaultHttpClient.DefaultRequestHeaders.Add("User-Agent", "TableLamp-App");
-            }
+                AllowAutoRedirect = false
+            };
+            DefaultRedirectInterceptorClient = new HttpClient(handler);
+            DefaultRedirectInterceptorClient.DefaultRequestHeaders.Add("User-Agent", "TableLamp-App");
         }
 
         /// <summary>
@@ -88,47 +100,206 @@ namespace TableLamp.Services
         }
 
         /// <summary>
-        /// Checks GitHub repository releases for the latest version of Table Lamp.
+        /// Validates that a release tag string is well-formed and safe against path traversal.
+        /// </summary>
+        public static bool IsValidTag(string? tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag)) return false;
+            string trimmed = tag.Trim();
+            if (trimmed.Length > 128) return false;
+            if (trimmed.Contains("..") || trimmed.Contains('/') || trimmed.Contains('\\')) return false;
+            return SafeTagPattern.IsMatch(trimmed);
+        }
+
+        /// <summary>
+        /// Validates that a URI uses HTTPS and points to an authentic GitHub domain.
+        /// </summary>
+        public static bool IsTrustedGitHubUrl(Uri? uri)
+        {
+            if (uri == null) return false;
+            if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return false;
+
+            string host = uri.Host.ToLowerInvariant();
+            return host == "github.com" ||
+                   host.EndsWith(".github.com", StringComparison.OrdinalIgnoreCase) ||
+                   host == "objects.githubusercontent.com" ||
+                   host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase) ||
+                   host.EndsWith(".amazonaws.com", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Mathematically constructs the direct release page URL without API calls.
+        /// </summary>
+        public static string BuildReleaseUrl(string owner, string repo, string tag)
+        {
+            return $"https://github.com/{owner}/{repo}/releases/tag/{tag}";
+        }
+
+        /// <summary>
+        /// Mathematically constructs the direct CDN asset download URL without API calls.
+        /// Blueprint: https://github.com/{owner}/{repo}/releases/download/{version}/{filename}
+        /// </summary>
+        public static string BuildAssetDownloadUrl(string owner, string repo, string tag, string filename)
+        {
+            return $"https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}";
+        }
+
+        /// <summary>
+        /// Extracts the release tag from a GitHub release URL (e.g. .../releases/tag/{tag}).
+        /// Validates that the tag is safe against injection or path traversal.
+        /// </summary>
+        public static string? ExtractTagFromReleaseUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+
+            int tagIdx = url.IndexOf("/releases/tag/", StringComparison.OrdinalIgnoreCase);
+            if (tagIdx < 0) return null;
+
+            string tagPart = url.Substring(tagIdx + "/releases/tag/".Length);
+
+            // Strip trailing slash, query parameters, or fragments
+            int delimiterIdx = tagPart.IndexOfAny(new[] { '/', '?', '#' });
+            if (delimiterIdx >= 0)
+            {
+                tagPart = tagPart.Substring(0, delimiterIdx);
+            }
+
+            string decoded = Uri.UnescapeDataString(tagPart.Trim());
+            return IsValidTag(decoded) ? decoded : null;
+        }
+
+        /// <summary>
+        /// Extracts the release tag from an HTTP response, checking the 302 Location header
+        /// or the final RequestUri if auto-redirect was active.
+        /// </summary>
+        public static string? ExtractTagFromResponse(HttpResponseMessage response)
+        {
+            // 1. Check Location header (when redirect is intercepted)
+            if (response.Headers.Location != null)
+            {
+                var loc = response.Headers.Location;
+                if (!loc.IsAbsoluteUri || IsTrustedGitHubUrl(loc))
+                {
+                    string? tag = ExtractTagFromReleaseUrl(loc.ToString());
+                    if (!string.IsNullOrWhiteSpace(tag)) return tag;
+                }
+            }
+
+            // 2. Check final RequestUri (when redirect was followed)
+            if (response.RequestMessage?.RequestUri != null)
+            {
+                var reqUri = response.RequestMessage.RequestUri;
+                if (IsTrustedGitHubUrl(reqUri))
+                {
+                    string? tag = ExtractTagFromReleaseUrl(reqUri.ToString());
+                    if (!string.IsNullOrWhiteSpace(tag)) return tag;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Checks GitHub for the latest release of Table Lamp using the zero-API 302 redirect trick.
+        /// Guaranteed zero REST API calls and zero rate limit restrictions.
         /// </summary>
         public static async Task<AppUpdateResult> CheckForUpdatesAsync(HttpClient? httpClient = null, CancellationToken ct = default)
         {
-            var client = httpClient ?? DefaultHttpClient;
-            string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
+            // Concurrency guard: ignore duplicate burst calls if already checking
+            if (!await CheckLock.WaitAsync(0, ct))
+            {
+                return new AppUpdateResult
+                {
+                    Success = false,
+                    CurrentVersion = CurrentVersionString,
+                    ErrorMessage = "An update check is already in progress. Please wait a moment."
+                };
+            }
+
+            var client = httpClient ?? DefaultRedirectInterceptorClient;
+            string pingUrl = $"https://github.com/{RepoOwner}/{RepoName}/releases/latest";
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(15)); // 15-second timeout
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                // Send HEAD request (0-byte payload, fastest possible response)
+                using var request = new HttpRequestMessage(HttpMethod.Head, pingUrl);
                 if (!request.Headers.Contains("User-Agent"))
                 {
                     request.Headers.Add("User-Agent", "TableLamp-App");
                 }
 
-                using var response = await client.SendAsync(request, ct);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                HttpResponseMessage response;
+                try
                 {
-                    return new AppUpdateResult
+                    response = await client.SendAsync(request, cts.Token);
+                }
+                catch (HttpRequestException)
+                {
+                    // Fallback to GET if some network proxies intercept or disallow HEAD
+                    using var getReq = new HttpRequestMessage(HttpMethod.Get, pingUrl);
+                    if (!getReq.Headers.Contains("User-Agent"))
                     {
-                        Success = false,
-                        CurrentVersion = CurrentVersionString,
-                        ErrorMessage = $"Release repository not found: '{RepoOwner}/{RepoName}'. Please check the repository settings."
-                    };
+                        getReq.Headers.Add("User-Agent", "TableLamp-App");
+                    }
+                    response = await client.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 }
 
-                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                using (response)
                 {
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        return new AppUpdateResult
+                        {
+                            Success = false,
+                            CurrentVersion = CurrentVersionString,
+                            ErrorMessage = $"Release repository not found: '{RepoOwner}/{RepoName}'. Please check your settings."
+                        };
+                    }
+
+                    string? latestTag = ExtractTagFromResponse(response);
+
+                    if (string.IsNullOrWhiteSpace(latestTag))
+                    {
+                        // Repository exists, but no tagged release has been published yet
+                        return new AppUpdateResult
+                        {
+                            Success = true,
+                            IsUpdateAvailable = false,
+                            CurrentVersion = CurrentVersionString,
+                            LatestVersion = CurrentVersionString,
+                            ReleaseTitle = "No releases published",
+                            ReleaseUrl = $"https://github.com/{RepoOwner}/{RepoName}/releases"
+                        };
+                    }
+
+                    var latestParsed = ParseVersion(latestTag);
+                    bool isUpdateAvailable = latestParsed > CurrentVersion;
+                    string releasePage = BuildReleaseUrl(RepoOwner, RepoName, latestTag);
+                    string downloadUrl = BuildAssetDownloadUrl(RepoOwner, RepoName, latestTag, $"TableLamp-Setup-{latestTag}.exe");
+
                     return new AppUpdateResult
                     {
-                        Success = false,
+                        Success = true,
+                        IsUpdateAvailable = isUpdateAvailable,
                         CurrentVersion = CurrentVersionString,
-                        ErrorMessage = "GitHub API rate limit exceeded or access denied. Please try again later."
+                        LatestVersion = latestTag,
+                        ReleaseTitle = $"Table Lamp {latestTag}",
+                        ReleaseUrl = releasePage,
+                        DownloadUrl = downloadUrl
                     };
                 }
-
-                response.EnsureSuccessStatusCode();
-
-                string json = await response.Content.ReadAsStringAsync(ct);
-                return ParseReleaseJson(json);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return new AppUpdateResult
+                {
+                    Success = false,
+                    CurrentVersion = CurrentVersionString,
+                    ErrorMessage = "Update check timed out after 15 seconds. Please check your internet connection."
+                };
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
             {
@@ -148,40 +319,115 @@ namespace TableLamp.Services
                     ErrorMessage = $"Failed to check for updates: {ex.Message}"
                 };
             }
+            finally
+            {
+                CheckLock.Release();
+            }
         }
 
         /// <summary>
-        /// Parses the GitHub latest release JSON payload into an AppUpdateResult.
+        /// Backward-compatible legacy parser for tests or fallback scenarios.
         /// </summary>
+        [Obsolete("Use zero-API redirect checking instead.")]
         public static AppUpdateResult ParseReleaseJson(string json)
         {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            string tagName = root.TryGetProperty("tag_name", out var tagElem) ? tagElem.GetString() ?? "" : "";
-            string title = root.TryGetProperty("name", out var nameElem) ? nameElem.GetString() ?? "" : "";
-            string body = root.TryGetProperty("body", out var bodyElem) ? bodyElem.GetString() ?? "" : "";
-            string htmlUrl = root.TryGetProperty("html_url", out var urlElem) ? urlElem.GetString() ?? "" : "";
-            DateTime? publishedAt = null;
-            if (root.TryGetProperty("published_at", out var pubElem) && pubElem.TryGetDateTime(out var dt))
+            try
             {
-                publishedAt = dt;
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                string tagName = root.TryGetProperty("tag_name", out var tagElem) ? tagElem.GetString() ?? "" : "";
+                string title = root.TryGetProperty("name", out var nameElem) ? nameElem.GetString() ?? "" : "";
+                string body = root.TryGetProperty("body", out var bodyElem) ? bodyElem.GetString() ?? "" : "";
+                string htmlUrl = root.TryGetProperty("html_url", out var urlElem) ? urlElem.GetString() ?? "" : "";
+                DateTime? publishedAt = null;
+                if (root.TryGetProperty("published_at", out var pubElem) && pubElem.TryGetDateTime(out var dt))
+                {
+                    publishedAt = dt;
+                }
+
+                var latestParsed = ParseVersion(tagName);
+                bool isUpdateAvailable = latestParsed > CurrentVersion;
+
+                return new AppUpdateResult
+                {
+                    Success = true,
+                    IsUpdateAvailable = isUpdateAvailable,
+                    CurrentVersion = CurrentVersionString,
+                    LatestVersion = string.IsNullOrWhiteSpace(tagName) ? "0.0.0.0" : tagName,
+                    ReleaseTitle = string.IsNullOrWhiteSpace(title) ? tagName : title,
+                    ReleaseNotes = body,
+                    ReleaseUrl = htmlUrl,
+                    PublishedAt = publishedAt
+                };
+            }
+            catch (Exception ex)
+            {
+                return new AppUpdateResult
+                {
+                    Success = false,
+                    CurrentVersion = CurrentVersionString,
+                    ErrorMessage = $"Invalid release data format: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Downloads the installer package from the specified GitHub download URL,
+        /// reporting percentage progress via the provided IProgress callback.
+        /// </summary>
+        public static async Task<bool> DownloadInstallerAsync(
+            string downloadUrl,
+            string destinationPath,
+            IProgress<double>? progress = null,
+            HttpClient? httpClient = null,
+            CancellationToken ct = default)
+        {
+            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri) || !IsTrustedGitHubUrl(uri))
+            {
+                return false;
             }
 
-            var latestParsed = ParseVersion(tagName);
-            bool isUpdateAvailable = latestParsed > CurrentVersion;
-
-            return new AppUpdateResult
+            var client = httpClient ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = true });
+            using var req = new HttpRequestMessage(HttpMethod.Get, uri);
+            if (!req.Headers.Contains("User-Agent"))
             {
-                Success = true,
-                IsUpdateAvailable = isUpdateAvailable,
-                CurrentVersion = CurrentVersionString,
-                LatestVersion = string.IsNullOrWhiteSpace(tagName) ? "0.0.0.0" : tagName,
-                ReleaseTitle = string.IsNullOrWhiteSpace(title) ? tagName : title,
-                ReleaseNotes = body,
-                ReleaseUrl = htmlUrl,
-                PublishedAt = publishedAt
-            };
+                req.Headers.Add("User-Agent", "TableLamp-App");
+            }
+
+            using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            long totalBytes = res.Content.Headers.ContentLength ?? -1;
+            string? dir = Path.GetDirectoryName(destinationPath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            using (var stream = await res.Content.ReadAsStreamAsync(ct))
+            using (var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                byte[] buffer = new byte[81920];
+                long totalRead = 0;
+                int read;
+                while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                    totalRead += read;
+                    if (totalBytes > 0)
+                    {
+                        double pct = (double)totalRead / totalBytes * 100.0;
+                        progress?.Report(Math.Min(100.0, pct));
+                    }
+                }
+            }
+
+            var fileInfo = new FileInfo(destinationPath);
+            return fileInfo.Length > 0;
         }
     }
 }

@@ -14,6 +14,7 @@ namespace TableLamp.Services
         private static PresetTagDatabase? _instance;
         public static PresetTagDatabase Instance => _instance ??= new PresetTagDatabase();
 
+        private readonly object _dbLock = new();
         private readonly PresetTagGenerator _generator = new();
         private Dictionary<string, PresetSubject> _inMemoryTree = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _storagePath;
@@ -30,6 +31,11 @@ namespace TableLamp.Services
             InitializeDatabase();
         }
 
+        /// <summary>
+        /// True if the curated database contains no subjects (user needs to download curated presets from GitHub).
+        /// </summary>
+        public bool IsEmpty => _inMemoryTree == null || _inMemoryTree.Count == 0;
+
         public void InitializeDatabase()
         {
             try
@@ -38,24 +44,21 @@ namespace TableLamp.Services
                 {
                     string json = File.ReadAllText(_storagePath);
                     _inMemoryTree = _generator.Parse(json);
-                    if (_inMemoryTree.Count > 0)
-                    {
-                        return;
-                    }
+                    return;
                 }
             }
             catch (Exception)
             {
-                // Fallback to starter presets
+                // Fallback to empty tree
             }
 
-            // Seed starter preset JSON
-            string starterJson = _generator.CreateStarterPresetJson();
-            _inMemoryTree = _generator.Parse(starterJson);
+            // In v0.0.7.3: All mock starter presets are removed.
+            // Database initializes empty until curated tags are downloaded from GitHub.
+            _inMemoryTree = new Dictionary<string, PresetSubject>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                File.WriteAllText(_storagePath, starterJson);
+                File.WriteAllText(_storagePath, "{}");
             }
             catch (Exception)
             {
@@ -75,19 +78,30 @@ namespace TableLamp.Services
 
         public void SaveTree(Dictionary<string, PresetSubject> updatedTree)
         {
-            _inMemoryTree = updatedTree ?? new Dictionary<string, PresetSubject>(StringComparer.OrdinalIgnoreCase);
-            string json = _generator.GenerateJson(_inMemoryTree);
-
-            try
+            lock (_dbLock)
             {
-                File.WriteAllText(_storagePath, json);
-            }
-            catch (Exception)
-            {
-                // In-memory cache continues to serve requests
-            }
+                _inMemoryTree = updatedTree ?? new Dictionary<string, PresetSubject>(StringComparer.OrdinalIgnoreCase);
+                string json = _generator.GenerateJson(_inMemoryTree);
 
-            PresetsChanged?.Invoke();
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        File.WriteAllText(_storagePath, json);
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        System.Threading.Thread.Sleep(50);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
+                }
+
+                PresetsChanged?.Invoke();
+            }
         }
 
         public void ReloadFromJson(string json)
@@ -230,13 +244,11 @@ namespace TableLamp.Services
         }
 
         /// <summary>
-        /// Restores canonical starter presets.
+        /// Clears the curated presets database. (Starter presets removed in v0.0.7.3; only GitHub tags used).
         /// </summary>
         public void ResetToStarterPresets()
         {
-            string starterJson = _generator.CreateStarterPresetJson();
-            _inMemoryTree = _generator.Parse(starterJson);
-            SaveTree(_inMemoryTree);
+            FormatDatabase();
         }
     }
 }

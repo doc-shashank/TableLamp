@@ -9,7 +9,7 @@ namespace TableLamp.Services
         public int NotificationDurationSeconds { get; set; } = 5;
         public string? LastWorkspacePath { get; set; }
         public string? LastOpenedJsonPath { get; set; }
-        public string CuratedContentVersion { get; set; } = "v0.0.7.0";
+        public string CuratedContentVersion { get; set; } = "v0.0.7.5";
         public DateTime? CuratedContentLastUpdated { get; set; }
     }
 
@@ -18,6 +18,7 @@ namespace TableLamp.Services
         private static AppSettingsService? _instance;
         public static AppSettingsService Instance => _instance ??= new AppSettingsService();
 
+        private readonly object _saveLock = new();
         private readonly string _storagePath;
         private AppSettings _settings = new();
 
@@ -66,7 +67,7 @@ namespace TableLamp.Services
 
         public string CuratedContentVersion
         {
-            get => string.IsNullOrWhiteSpace(_settings.CuratedContentVersion) ? "v0.0.7.0" : _settings.CuratedContentVersion;
+            get => string.IsNullOrWhiteSpace(_settings.CuratedContentVersion) ? "v0.0.7.5" : _settings.CuratedContentVersion;
             set
             {
                 if (_settings.CuratedContentVersion != value)
@@ -106,38 +107,61 @@ namespace TableLamp.Services
 
         public void Load()
         {
-            try
+            lock (_saveLock)
             {
-                if (File.Exists(_storagePath))
+                for (int attempt = 0; attempt < 3; attempt++)
                 {
-                    string json = File.ReadAllText(_storagePath);
-                    var loaded = JsonSerializer.Deserialize<AppSettings>(json);
-                    if (loaded != null)
+                    try
                     {
-                        _settings = loaded;
-                        if (_settings.NotificationDurationSeconds <= 0)
+                        if (File.Exists(_storagePath))
                         {
-                            _settings.NotificationDurationSeconds = 5;
+                            string json = File.ReadAllText(_storagePath);
+                            var loaded = JsonSerializer.Deserialize<AppSettings>(json);
+                            if (loaded != null)
+                            {
+                                _settings = loaded;
+                                if (_settings.NotificationDurationSeconds <= 0)
+                                {
+                                    _settings.NotificationDurationSeconds = 5;
+                                }
+                            }
                         }
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        System.Threading.Thread.Sleep(30);
+                    }
+                    catch
+                    {
+                        _settings = new AppSettings();
+                        break;
                     }
                 }
-            }
-            catch
-            {
-                _settings = new AppSettings();
             }
         }
 
         public void Save()
         {
-            try
+            lock (_saveLock)
             {
-                string json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_storagePath, json);
-            }
-            catch
-            {
-                // Silently handle IO errors
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        string json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
+                        File.WriteAllText(_storagePath, json);
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        System.Threading.Thread.Sleep(30);
+                    }
+                    catch
+                    {
+                        break;
+                    }
+                }
             }
         }
     }

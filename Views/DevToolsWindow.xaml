@@ -22,7 +22,7 @@
                     </Border>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Custom Presets Editor" FontSize="16" FontWeight="Bold" />
-                        <TextBlock Text="Dev Tools (v0.0.7.0)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Dev Tools (v0.0.7.4)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -63,6 +63,16 @@
                                 <MenuFlyoutItem x:Name="MenuOpenWorkspace" Text="Open Workspace">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xED43;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem x:Name="MenuOpenZipWorkspace" Text="Open Compressed Workspace (.zip)...">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xEDE2;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem x:Name="MenuExportWorkspace" Text="Export Workspace">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xEDE1;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                                 <MenuFlyoutSeparator />
@@ -150,26 +160,32 @@
                 </Border.ContextFlyout>
                 <Grid RowDefinitions="Auto,*,Auto">
                     <!-- Workspace Header -->
-                    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xED43;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Workspace" FontWeight="SemiBold" FontSize="13" />
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xED43;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Workspace" FontWeight="SemiBold" FontSize="13" />
+                            </StackPanel>
+                            <!-- Original directory label opens folder on click (no floating pill) -->
+                            <Grid x:Name="WorkspacePathContainer" Margin="0,2,0,0">
+                                <TextBlock x:Name="WorkspacePathText"
+                                           Text="C:\..."
+                                           FontSize="10"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTipService.ToolTip="Click to open folder in Explorer"
+                                           IsHitTestVisible="True" />
+                            </Grid>
                         </StackPanel>
-                        <!-- Original directory label opens folder on click (no floating pill) -->
-                        <Grid x:Name="WorkspacePathContainer" Margin="0,2,0,0">
-                            <TextBlock x:Name="WorkspacePathText"
-                                       Text="C:\..."
-                                       FontSize="10"
-                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                       TextTrimming="CharacterEllipsis"
-                                       ToolTipService.ToolTip="Click to open folder in Explorer"
-                                       IsHitTestVisible="True" />
-                        </Grid>
-                    </StackPanel>
+                    </Grid>
 
                     <!-- Workspace Tree View: Folders and Files with Expand / Collapse Hierarchy -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="WorkspaceTreeContainer" Spacing="2" />
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  HorizontalScrollMode="Enabled"
+                                  VerticalScrollMode="Enabled">
+                        <StackPanel x:Name="WorkspaceTreeContainer" Spacing="2" HorizontalAlignment="Left" MinWidth="220" />
                     </ScrollViewer>
 
                     <Button x:Name="CloseWorkspaceButton"

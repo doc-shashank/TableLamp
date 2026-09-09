@@ -150,7 +150,9 @@ namespace TableLamp.Views
                     }
                     else
                     {
-                        SubjectStatusBadge.Text = "Not in Presets";
+                        SubjectStatusBadge.Text = PresetTagDatabase.Instance.IsEmpty
+                            ? "Curated DB Empty (Sync via Settings)"
+                            : "Not in Presets";
                         if (Application.Current.Resources.TryGetValue("SystemFillColorCautionBrush", out object? caution) && caution is Brush cb)
                         {
                             SubjectStatusBadge.Foreground = cb;

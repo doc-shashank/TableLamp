@@ -58,15 +58,21 @@ if (-not $IsccPath) {
 }
 
 if ($IsccPath) {
+    # Extract version dynamically from TableLamp.csproj
+    [xml]$csprojXml = Get-Content "$ProjectFile"
+    $AppVersion = $csprojXml.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+    if (-not $AppVersion) { $AppVersion = "0.0.7.5" }
+
     Write-Host "Found Inno Setup compiler at: $IsccPath" -ForegroundColor Green
+    Write-Host "App Version: $AppVersion" -ForegroundColor Cyan
     Write-Host "Compiling installer script: $IssFile" -ForegroundColor Yellow
-    & $IsccPath "$IssFile"
+    & $IsccPath "/DMyAppVersion=$AppVersion" "$IssFile"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Inno Setup compiler failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
     }
     Write-Host "`n[SUCCESS] Installer built successfully!" -ForegroundColor Green
-    $outputExe = Join-Path $ScriptDir "Output\TableLamp-Setup-v0.0.7.0.exe"
+    $outputExe = Join-Path $ScriptDir "Output\TableLamp-Setup-v$AppVersion.exe"
     if (Test-Path $outputExe) {
         Write-Host "Installer package: $outputExe" -ForegroundColor Cyan
     }

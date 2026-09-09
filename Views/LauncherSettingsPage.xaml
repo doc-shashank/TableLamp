@@ -65,7 +65,7 @@
                             <StackPanel Spacing="2">
                                 <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="15" />
                                 <TextBlock x:Name="AppVersionBadgeText"
-                                           Text="Current Version: v0.0.7.0"
+                                           Text="Current Version: v0.0.7.4"
                                            FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -85,12 +85,11 @@
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap" />
 
-                            <Button x:Name="ViewReleaseUrlButton"
-                                    Content="Open Latest Release in Browser"
-                                    Style="{ThemeResource HyperlinkButtonSubtleStyle}"
-                                    Visibility="Collapsed"
-                                    HorizontalAlignment="Left"
-                                    Padding="0" />
+                            <HyperlinkButton x:Name="ViewReleaseUrlButton"
+                                             Content="Open Latest Release in Browser"
+                                             Visibility="Collapsed"
+                                             HorizontalAlignment="Left"
+                                             Padding="0" />
                         </StackPanel>
                     </ScrollViewer>
 
@@ -129,13 +128,13 @@
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Curated Presets" FontWeight="SemiBold" FontSize="15" />
                                 <TextBlock x:Name="CuratedVersionBadgeText"
-                                           Text="Curated Version: v0.0.7.0"
+                                           Text="Curated Version: v0.0.7.4"
                                            FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </StackPanel>
                         <TextBlock x:Name="CuratedRepoInfoText"
-                                   Text="Repository: doc-shashank/TableLamp-CuratedContent"
+                                   Text="Repository: doc-shashank/table-lamp-curated-tags"
                                    FontSize="11"
                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     </StackPanel>
@@ -176,12 +175,12 @@
             </Border>
         </Grid>
 
-        <!-- Status Notification / InfoBar -->
-        <InfoBar x:Name="LauncherSettingsInfoBar"
-                 Grid.Row="2"
-                 IsOpen="False"
-                 IsIconVisible="True"
-                 IsClosable="True"
-                 Margin="0,10,0,0" />
+        <!-- Status Notification (Row 2) -->
+        <StackPanel Grid.Row="2" Margin="0,8,0,0">
+            <InfoBar x:Name="LauncherSettingsInfoBar"
+                     IsOpen="False"
+                     IsIconVisible="True"
+                     IsClosable="True" />
+        </StackPanel>
     </Grid>
 </Page>

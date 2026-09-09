@@ -2,6 +2,8 @@ using System;
 using TableLamp.Models;
 using Xunit;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace TableLamp.Tests
 {
     public class ModelAndExtensionTests

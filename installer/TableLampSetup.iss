@@ -1,9 +1,11 @@
 ; Inno Setup Script for Table Lamp
-; Version: 0.0.7.0
+; Version: 0.0.7.5
 ; Targets: Unpackaged WinUI 3 Desktop Application (.NET 8 Windows App SDK)
 
 #define MyAppName "Table Lamp"
-#define MyAppVersion "0.0.7.0"
+#ifndef MyAppVersion
+#define MyAppVersion "0.0.7.5"
+#endif
 #define MyAppPublisher "doc-shashank"
 #define MyAppURL "https://github.com/doc-shashank/table-lamp"
 #define MyAppExeName "TableLamp.exe"
@@ -29,6 +31,15 @@ SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+
+; Ensure the installer .exe file version in Windows Explorer details reflects the app version
+VersionInfoVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductTextVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Setup
+VersionInfoCopyright=Copyright (C) {#MyAppPublisher}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
