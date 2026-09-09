@@ -9,6 +9,8 @@ namespace TableLamp.Services
         public int NotificationDurationSeconds { get; set; } = 5;
         public string? LastWorkspacePath { get; set; }
         public string? LastOpenedJsonPath { get; set; }
+        public string CuratedContentVersion { get; set; } = "v0.0.7.0";
+        public DateTime? CuratedContentLastUpdated { get; set; }
     }
 
     public class AppSettingsService
@@ -56,6 +58,34 @@ namespace TableLamp.Services
                 if (_settings.LastOpenedJsonPath != value)
                 {
                     _settings.LastOpenedJsonPath = value;
+                    Save();
+                    SettingsChanged?.Invoke();
+                }
+            }
+        }
+
+        public string CuratedContentVersion
+        {
+            get => string.IsNullOrWhiteSpace(_settings.CuratedContentVersion) ? "v0.0.7.0" : _settings.CuratedContentVersion;
+            set
+            {
+                if (_settings.CuratedContentVersion != value)
+                {
+                    _settings.CuratedContentVersion = value;
+                    Save();
+                    SettingsChanged?.Invoke();
+                }
+            }
+        }
+
+        public DateTime? CuratedContentLastUpdated
+        {
+            get => _settings.CuratedContentLastUpdated;
+            set
+            {
+                if (_settings.CuratedContentLastUpdated != value)
+                {
+                    _settings.CuratedContentLastUpdated = value;
                     Save();
                     SettingsChanged?.Invoke();
                 }

@@ -1,0 +1,187 @@
+<Page
+    x:Class="TableLamp.Views.LauncherSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Padding="36,18,36,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Top Header & Navigation -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="BackToLauncherButton"
+                    Grid.Column="0"
+                    Style="{ThemeResource SubtleButtonStyle}"
+                    Padding="10,6"
+                    CornerRadius="8"
+                    VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                    <TextBlock Text="Back" FontWeight="SemiBold" FontSize="13" />
+                </StackPanel>
+            </Button>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Border Width="28" Height="28" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                    <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="Launcher Settings" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Settings Cards Grid -->
+        <Grid Grid.Row="1" ColumnSpacing="18" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: App Version & Updates -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="20">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Card Header -->
+                    <StackPanel Grid.Row="0" Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <FontIcon Glyph="&#xE895;" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="15" />
+                                <TextBlock x:Name="AppVersionBadgeText"
+                                           Text="Current Version: v0.0.7.0"
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock x:Name="AppRepoInfoText"
+                                   Text="Repository: doc-shashank/table-lamp"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+
+                    <!-- Card Body / Status Details -->
+                    <ScrollViewer Grid.Row="1" Margin="0,12,0,12" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="AppUpdateStatusText"
+                                       Text="Checks GitHub Releases for new Table Lamp desktop builds."
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <Button x:Name="ViewReleaseUrlButton"
+                                    Content="Open Latest Release in Browser"
+                                    Style="{ThemeResource HyperlinkButtonSubtleStyle}"
+                                    Visibility="Collapsed"
+                                    HorizontalAlignment="Left"
+                                    Padding="0" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Card Footer Actions -->
+                    <Grid Grid.Row="2">
+                        <Button x:Name="CheckAppUpdateButton"
+                                Content="Check for App Updates"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                Padding="12,8" />
+                        <ProgressRing x:Name="AppUpdateProgressRing"
+                                      Width="24"
+                                      Height="24"
+                                      IsActive="False"
+                                      Visibility="Collapsed"
+                                      HorizontalAlignment="Right"
+                                      Margin="0,0,12,0" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Card 2: Curated Tags Version & Sync -->
+            <Border Grid.Column="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="20">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Card Header -->
+                    <StackPanel Grid.Row="0" Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <FontIcon Glyph="&#xE8D7;" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Curated Presets" FontWeight="SemiBold" FontSize="15" />
+                                <TextBlock x:Name="CuratedVersionBadgeText"
+                                           Text="Curated Version: v0.0.7.0"
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock x:Name="CuratedRepoInfoText"
+                                   Text="Repository: doc-shashank/TableLamp-CuratedContent"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+
+                    <!-- Card Body / Status Details -->
+                    <ScrollViewer Grid.Row="1" Margin="0,12,0,12" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="CuratedStatusText"
+                                       Text="Downloads latest release, extracts JSON presets, and builds the separate Curated Tags Database."
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock x:Name="CuratedMetricsText"
+                                       Text="Curated: 0 subjects, 0 chapters, 0 topics"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Card Footer Actions -->
+                    <Grid Grid.Row="2">
+                        <Button x:Name="SyncCuratedPresetsButton"
+                                Content="Sync Curated Presets"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                Padding="12,8" />
+                        <ProgressRing x:Name="CuratedProgressRing"
+                                      Width="24"
+                                      Height="24"
+                                      IsActive="False"
+                                      Visibility="Collapsed"
+                                      HorizontalAlignment="Right"
+                                      Margin="0,0,12,0" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status Notification / InfoBar -->
+        <InfoBar x:Name="LauncherSettingsInfoBar"
+                 Grid.Row="2"
+                 IsOpen="False"
+                 IsIconVisible="True"
+                 IsClosable="True"
+                 Margin="0,10,0,0" />
+    </Grid>
+</Page>

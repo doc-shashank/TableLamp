@@ -128,7 +128,7 @@
                                     x:Name="UpdateCuratedPresetsButton"
                                     Content="Check for Updates"
                                     Style="{ThemeResource AccentButtonStyle}"
-                                    IsEnabled="False"
+                                    IsEnabled="True"
                                     Padding="16,8"
                                     VerticalAlignment="Center" />
                         </Grid>
@@ -180,7 +180,10 @@
                             </Border>
                             <StackPanel Spacing="2">
                                 <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock Text="Check for the latest Table Lamp releases on GitHub. Current version: v0.0.6.5" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="AppUpdatesVersionText"
+                                           Text="Check for the latest Table Lamp releases on GitHub. Current version: v0.0.7.0"
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </StackPanel>
 

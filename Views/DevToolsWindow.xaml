@@ -22,7 +22,7 @@
                     </Border>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Custom Presets Editor" FontSize="16" FontWeight="Bold" />
-                        <TextBlock Text="Dev Tools (v0.0.6.5)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Dev Tools (v0.0.7.0)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </StackPanel>
 

@@ -25,14 +25,72 @@ namespace TableLamp.Views
             FormatDatabaseButton.Click += OnFormatDatabaseClicked;
             RestoreStartersButton.Click += OnRestoreStartersClicked;
             CheckForUpdatesButton.Click += OnCheckForUpdatesClicked;
+            UpdateCuratedPresetsButton.Click += OnUpdateCuratedPresetsClicked;
 
             LoadNotificationDurationSetting();
             NotificationDurationComboBox.SelectionChanged += OnNotificationDurationChanged;
         }
 
-        private void OnCheckForUpdatesClicked(object sender, RoutedEventArgs e)
+        private async void OnCheckForUpdatesClicked(object sender, RoutedEventArgs e)
         {
-            NotificationCard.Show("You are running the latest version of Table Lamp (v0.0.6.5).", InfoBarSeverity.Success);
+            CheckForUpdatesButton.IsEnabled = false;
+            NotificationCard.Show("Checking for Table Lamp updates...", InfoBarSeverity.Informational);
+
+            try
+            {
+                var result = await AppUpdateService.CheckForUpdatesAsync();
+                if (result.Success)
+                {
+                    if (result.IsUpdateAvailable)
+                    {
+                        NotificationCard.Show($"New version available: {result.LatestVersion}! {result.ReleaseTitle}", InfoBarSeverity.Informational);
+                    }
+                    else
+                    {
+                        NotificationCard.Show($"You are running the latest version of Table Lamp (v{AppUpdateService.CurrentVersionString}).", InfoBarSeverity.Success);
+                    }
+                }
+                else
+                {
+                    NotificationCard.Show(result.ErrorMessage ?? "Could not check for updates.", InfoBarSeverity.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationCard.Show($"Update check failed: {ex.Message}", InfoBarSeverity.Error);
+            }
+            finally
+            {
+                CheckForUpdatesButton.IsEnabled = true;
+            }
+        }
+
+        private async void OnUpdateCuratedPresetsClicked(object sender, RoutedEventArgs e)
+        {
+            UpdateCuratedPresetsButton.IsEnabled = false;
+            NotificationCard.Show("Checking and syncing curated presets from GitHub...", InfoBarSeverity.Informational);
+
+            try
+            {
+                var result = await CuratedContentUpdateService.DownloadAndApplyUpdateAsync();
+                if (result.Success)
+                {
+                    NotificationCard.Show($"Curated tags updated to {result.VersionApplied}! {result.FilesImported} file(s) merged into Curated Database.", InfoBarSeverity.Success);
+                    RefreshStats();
+                }
+                else
+                {
+                    NotificationCard.Show(result.ErrorMessage ?? "Failed to sync curated tags.", InfoBarSeverity.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationCard.Show($"Curated tag sync failed: {ex.Message}", InfoBarSeverity.Error);
+            }
+            finally
+            {
+                UpdateCuratedPresetsButton.IsEnabled = true;
+            }
         }
 
         private bool _isInitializingSettings = true;

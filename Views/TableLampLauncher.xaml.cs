@@ -86,6 +86,11 @@ namespace TableLamp.Views
 
         private void WireCaptionButtons()
         {
+            LauncherSettingsButton.Click += (s, e) =>
+            {
+                ToggleLauncherSettings();
+            };
+
             WindowMinimizeButton.Click += (s, e) =>
             {
                 if (_appWindow?.Presenter is OverlappedPresenter presenter)
@@ -225,5 +230,42 @@ namespace TableLamp.Views
         {
             NotificationCard.Show(message, severity, title);
         }
+
+        #region Launcher Settings Navigation
+
+        private LauncherSettingsPage? _settingsPage;
+
+        public void ToggleLauncherSettings()
+        {
+            if (LauncherSettingsFrame.Visibility == Visibility.Visible)
+            {
+                HideLauncherSettings();
+            }
+            else
+            {
+                ShowLauncherSettings();
+            }
+        }
+
+        public void ShowLauncherSettings()
+        {
+            if (_settingsPage == null)
+            {
+                _settingsPage = new LauncherSettingsPage();
+                _settingsPage.BackRequested += HideLauncherSettings;
+            }
+
+            LauncherSettingsFrame.Content = _settingsPage;
+            LauncherModesContainer.Visibility = Visibility.Collapsed;
+            LauncherSettingsFrame.Visibility = Visibility.Visible;
+        }
+
+        public void HideLauncherSettings()
+        {
+            LauncherSettingsFrame.Visibility = Visibility.Collapsed;
+            LauncherModesContainer.Visibility = Visibility.Visible;
+        }
+
+        #endregion
     }
 }
