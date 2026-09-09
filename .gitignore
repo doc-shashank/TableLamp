@@ -60,3 +60,7 @@ Agent_Instructions*.txt
 # Android
 [Aa]ndroid/
 Android/
+
+# Curated Content
+CuratedContent/
+[Cc]uratedContent/
