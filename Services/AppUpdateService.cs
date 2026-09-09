@@ -36,8 +36,66 @@ namespace TableLamp.Services
         public static string RepoOwner { get; set; } = "doc-shashank";
         public static string RepoName { get; set; } = "table-lamp";
 
-        public static readonly string CurrentVersionString = "0.0.7.5";
-        public static readonly Version CurrentVersion = new(0, 0, 7, 5);
+        private static readonly (string VersionStr, Version Ver) DetectedVersion = ResolveVersion();
+
+        public static string CurrentVersionString => DetectedVersion.VersionStr;
+        public static Version CurrentVersion => DetectedVersion.Ver;
+
+        private static (string VersionStr, Version Ver) ResolveVersion()
+        {
+            // 1. Primary: pull version directly from TableLamp.csproj dynamically as requested
+            try
+            {
+                string? current = AppContext.BaseDirectory;
+                for (int i = 0; i < 7 && !string.IsNullOrEmpty(current); i++)
+                {
+                    string csproj = Path.Combine(current, "TableLamp.csproj");
+                    if (File.Exists(csproj))
+                    {
+                        string content = File.ReadAllText(csproj);
+                        var m = Regex.Match(content, @"<Version>([^<]+)</Version>");
+                        if (m.Success)
+                        {
+                            string vStr = m.Groups[1].Value.Trim();
+                            if (Version.TryParse(vStr, out var pv))
+                            {
+                                return (vStr, pv);
+                            }
+                        }
+                    }
+                    current = Directory.GetParent(current)?.FullName;
+                }
+            }
+            catch { }
+
+            // 2. Secondary: assembly metadata when running deployed unpackaged app
+            try
+            {
+                var asm = typeof(AppUpdateService).Assembly;
+                var infoAttr = (System.Reflection.AssemblyInformationalVersionAttribute?)Attribute.GetCustomAttribute(asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+                string? raw = infoAttr?.InformationalVersion;
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    int plusIdx = raw.IndexOf('+');
+                    if (plusIdx >= 0) raw = raw.Substring(0, plusIdx);
+                    raw = raw.Trim().TrimStart('v', 'V');
+                    if (Version.TryParse(raw, out var v1) && v1 > new Version(0, 0, 0, 0))
+                    {
+                        return (raw, v1);
+                    }
+                }
+
+                var asmVer = asm.GetName().Version;
+                if (asmVer != null && asmVer > new Version(0, 0, 0, 0))
+                {
+                    string vStr = $"{asmVer.Major}.{asmVer.Minor}.{asmVer.Build}.{Math.Max(0, asmVer.Revision)}";
+                    return (vStr, asmVer);
+                }
+            }
+            catch { }
+
+            return ("0.0.8.0", new Version(0, 0, 8, 0));
+        }
 
         // Non-redirecting client to intercept the 302 redirect Location header without downloading pages
         private static readonly HttpClient DefaultRedirectInterceptorClient;

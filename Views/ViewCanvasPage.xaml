@@ -126,8 +126,95 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- Spaced Repetition Card Stats & Status Chip -->
+                <Border x:Name="CardSpacedRepetitionBorder"
+                        HorizontalAlignment="Center"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon Glyph="&#xE823;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="CardIntervalTextBlock" Text="Interval: 1.0d" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="CardEaseTextBlock" Text="Ease: 2.50" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="CardRepsTextBlock" Text="Reps: 0" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                        <Border x:Name="CardDueStatusBadge"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                Background="{ThemeResource SystemFillColorCautionBackgroundBrush}">
+                            <TextBlock x:Name="CardDueStatusTextBlock" Text="Due Now" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Spaced Repetition Active Recall Rating Bar -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="16,12"
+                        HorizontalAlignment="Stretch">
+                    <Grid RowDefinitions="Auto,Auto">
+                        <TextBlock Grid.Row="0"
+                                   Text="Rate Your Active Recall:"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,10" />
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                            <!-- Hard Button -->
+                            <Button x:Name="RateHardButton"
+                                    Grid.Column="0"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="12,10"
+                                    CornerRadius="8"
+                                    ToolTipService.ToolTip="Difficult or failed recall (Reduces interval)">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE711;" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    <TextBlock Text="Hard" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Medium Button -->
+                            <Button x:Name="RateMediumButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="12,10"
+                                    CornerRadius="8"
+                                    ToolTipService.ToolTip="Recalled with effort (Modest interval increase)">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE73E;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="Medium" FontWeight="SemiBold" FontSize="13" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Easy Button -->
+                            <Button x:Name="RateEasyButton"
+                                    Grid.Column="2"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="12,10"
+                                    CornerRadius="8"
+                                    ToolTipService.ToolTip="Effortless recall (Multiplies interval by ease factor)">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8FB;" FontSize="13" />
+                                    <TextBlock Text="Easy" FontWeight="SemiBold" FontSize="13" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+
                 <!-- Navigation Controls: Previous / Next Question -->
-                <Grid ColumnDefinitions="*,Auto,*" Margin="0,8,0,0">
+                <Grid ColumnDefinitions="*,Auto,*" Margin="0,4,0,0">
                     <Button x:Name="PreviousQuestionButton"
                             Content="Previous Question"
                             Style="{ThemeResource DefaultButtonStyle}"
@@ -137,7 +224,7 @@
 
                     <Button x:Name="NextQuestionButton"
                             Content="Next Question"
-                            Style="{ThemeResource AccentButtonStyle}"
+                            Style="{ThemeResource DefaultButtonStyle}"
                             Padding="24,10"
                             Grid.Column="2"
                             HorizontalAlignment="Right" />

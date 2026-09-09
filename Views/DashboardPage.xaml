@@ -11,21 +11,91 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
         <!-- 2-Column Dashboard: Left: Recent Sessions, Right: Action Buttons in their place -->
         <Grid ColumnDefinitions="440,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1340" HorizontalAlignment="Center">
-            <!-- 1. Left Column: Recent Sessions Section -->
-            <StackPanel Grid.Column="0" Spacing="16">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE81C;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
-                    </StackPanel>
+            <!-- 1. Left Column: Pending Reviews + Recent Sessions Section -->
+            <StackPanel Grid.Column="0" Spacing="24">
+                <!-- A. Pending Reviews Section (Spaced Repetition) -->
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE823;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Pending Reviews" FontSize="18" FontWeight="SemiBold" />
+                            <Border x:Name="PendingReviewsCountBadge"
+                                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                    CornerRadius="10"
+                                    Padding="8,2"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="PendingReviewsCountText" Text="0" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
 
-                    <Button x:Name="ViewAllSessionsButton"
-                            Grid.Column="1"
-                            Content="View All"
-                            Style="{ThemeResource SubtleButtonStyle}"
-                            Padding="10,4"
-                            FontSize="12" />
-                </Grid>
+                    <!-- Empty state if all caught up -->
+                    <Border x:Name="NoPendingReviewsBorder"
+                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="16,14"
+                            Visibility="Visible">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE73E;" FontSize="16" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+                            <TextBlock Text="All caught up! No reviews due right now." FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Pending Reviews ItemsControl -->
+                    <ItemsControl x:Name="PendingReviewsItemsControl" Visibility="Collapsed">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,0,10"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Padding="14,12"
+                                        Tapped="OnPendingReviewTapped"
+                                        PointerEntered="OnPendingReviewPointerEntered"
+                                        PointerExited="OnPendingReviewPointerExited"
+                                        Tag="{Binding}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Border Grid.Column="0"
+                                                Width="36"
+                                                Height="36"
+                                                CornerRadius="8"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                Margin="0,0,12,0"
+                                                VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding DueStatusDescription}" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" />
+                                        </StackPanel>
+
+                                        <FontIcon Grid.Column="2" Glyph="&#xE768;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" ToolTipService.ToolTip="Start Review" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- B. Recent Sessions Section -->
+                <StackPanel Spacing="16">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE81C;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
+                        </StackPanel>
+
+                        <Button x:Name="ViewAllSessionsButton"
+                                Grid.Column="1"
+                                Content="View All"
+                                Style="{ThemeResource SubtleButtonStyle}"
+                                Padding="10,4"
+                                FontSize="12" />
+                    </Grid>
 
                 <!-- Recent Sessions ItemsControl -->
                 <ItemsControl x:Name="RecentSessionsItemsControl">
@@ -73,8 +143,9 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
+        </StackPanel>
 
-            <!-- 2. Right Column: New Session & Review Session Buttons (Maintained in their place) -->
+        <!-- 2. Right Column: New Session & Review Session Buttons (Maintained in their place) -->
             <Grid Grid.Column="1" ColumnSpacing="24" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="340" />

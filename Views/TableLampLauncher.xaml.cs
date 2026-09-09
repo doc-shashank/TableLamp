@@ -37,6 +37,7 @@ namespace TableLamp.Views
             this.InitializeComponent();
 
             ConfigureLauncherWindow();
+            LauncherVersionTextBlock.Text = $"Version {AppUpdateService.CurrentVersionString}";
             WireCardMouseEvents();
             WireCaptionButtons();
             InitializeUpdateNotifications();

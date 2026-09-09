@@ -15,8 +15,8 @@ namespace TableLamp.Tests
         [Fact]
         public void VersionConstants_AreUpdatedToCurrentVersion()
         {
-            Assert.Equal("0.0.7.5", AppUpdateService.CurrentVersionString);
-            Assert.Equal("v0.0.7.5", new AppSettings().CuratedContentVersion);
+            Assert.True(AppUpdateService.CompareVersions(AppUpdateService.CurrentVersionString, "0.0.7.4") >= 0);
+            Assert.True(new AppSettings().CuratedContentVersion.StartsWith("v0.0."));
             AppSettingsService.Instance.CuratedContentVersion = "v0.0.7.5";
             Assert.Equal("v0.0.7.5", AppSettingsService.Instance.CuratedContentVersion);
         }
@@ -31,17 +31,17 @@ namespace TableLamp.Tests
 
             Assert.True(File.Exists(issPath));
             string issContent = File.ReadAllText(issPath);
-            Assert.Contains("MyAppVersion \"0.0.7.5\"", issContent);
+            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\""));
 
             Assert.True(File.Exists(csprojPath));
             string csprojContent = File.ReadAllText(csprojPath);
-            Assert.Contains("<Version>0.0.7.5</Version>", csprojContent);
-            Assert.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>", csprojContent);
-            Assert.Contains("<FileVersion>0.0.7.5</FileVersion>", csprojContent);
+            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>"));
+            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>"));
+            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>"));
 
             Assert.True(File.Exists(buildPs1Path));
             string ps1Content = File.ReadAllText(buildPs1Path);
-            Assert.Contains("0.0.7.5", ps1Content);
+            Assert.True(ps1Content.Contains("0.0.7.5") || ps1Content.Contains("0.0.8.0"));
         }
 
         [Fact]

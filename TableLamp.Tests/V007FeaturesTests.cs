@@ -43,28 +43,28 @@ namespace TableLamp.Tests
         {
             string jsonWithNewRelease = @"
             {
-                ""tag_name"": ""v0.0.8.0"",
-                ""name"": ""Table Lamp v0.0.8.0 Release"",
+                ""tag_name"": ""v0.0.9.0"",
+                ""name"": ""Table Lamp v0.0.9.0 Release"",
                 ""body"": ""- Added new study modes\n- Performance enhancements"",
-                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.8.0"",
+                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.9.0"",
                 ""published_at"": ""2026-09-09T12:00:00Z""
             }";
 
             var result = AppUpdateService.ParseReleaseJson(jsonWithNewRelease);
             Assert.True(result.Success);
             Assert.True(result.IsUpdateAvailable);
-            Assert.Equal("v0.0.8.0", result.LatestVersion);
-            Assert.Equal("Table Lamp v0.0.8.0 Release", result.ReleaseTitle);
+            Assert.Equal("v0.0.9.0", result.LatestVersion);
+            Assert.Equal("Table Lamp v0.0.9.0 Release", result.ReleaseTitle);
             Assert.Contains("Added new study modes", result.ReleaseNotes);
-            Assert.Equal("https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.8.0", result.ReleaseUrl);
+            Assert.Equal("https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.9.0", result.ReleaseUrl);
             Assert.NotNull(result.PublishedAt);
 
             string jsonWithCurrentRelease = @"
             {
-                ""tag_name"": ""v0.0.7.1"",
-                ""name"": ""Table Lamp v0.0.7.1 Release"",
+                ""tag_name"": ""v0.0.8.0"",
+                ""name"": ""Table Lamp v0.0.8.0 Release"",
                 ""body"": ""Current release notes"",
-                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.7.1"",
+                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.8.0"",
                 ""published_at"": ""2026-09-09T10:00:00Z""
             }";
 

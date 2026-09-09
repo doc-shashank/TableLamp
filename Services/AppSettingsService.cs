@@ -9,7 +9,7 @@ namespace TableLamp.Services
         public int NotificationDurationSeconds { get; set; } = 5;
         public string? LastWorkspacePath { get; set; }
         public string? LastOpenedJsonPath { get; set; }
-        public string CuratedContentVersion { get; set; } = "v0.0.7.5";
+        public string CuratedContentVersion { get; set; } = $"v{AppUpdateService.CurrentVersionString}";
         public DateTime? CuratedContentLastUpdated { get; set; }
     }
 

@@ -30,6 +30,19 @@ namespace TableLamp.Views
         {
             base.OnNavigatedTo(e);
             _basicUIController?.LoadRecentSessions();
+            _ = LoadPendingReviewsAsync();
+            SpacedRepetitionManager.Instance.ReviewStatesChanged += OnReviewStatesChanged;
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            SpacedRepetitionManager.Instance.ReviewStatesChanged -= OnReviewStatesChanged;
+        }
+
+        private void OnReviewStatesChanged()
+        {
+            DispatcherQueue.TryEnqueue(() => _ = LoadPendingReviewsAsync());
         }
 
         private void WireCardButtons()
@@ -178,6 +191,87 @@ namespace TableLamp.Views
         }
 
         private void OnRecentSessionPointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? stroke) && stroke is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
+            }
+        }
+
+        private async Task LoadPendingReviewsAsync()
+        {
+            try
+            {
+                var pending = await SpacedRepetitionManager.Instance.GetPendingReviewsAsync();
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (pending.Count > 0)
+                    {
+                        NoPendingReviewsBorder.Visibility = Visibility.Collapsed;
+                        PendingReviewsItemsControl.Visibility = Visibility.Visible;
+                        PendingReviewsItemsControl.ItemsSource = pending.Take(4).ToList();
+
+                        int dueCount = pending.Count(p => p.DueQuestionsCount > 0);
+                        if (dueCount > 0)
+                        {
+                            PendingReviewsCountBadge.Visibility = Visibility.Visible;
+                            PendingReviewsCountText.Text = dueCount.ToString();
+                        }
+                        else
+                        {
+                            PendingReviewsCountBadge.Visibility = Visibility.Collapsed;
+                        }
+                    }
+                    else
+                    {
+                        NoPendingReviewsBorder.Visibility = Visibility.Visible;
+                        PendingReviewsItemsControl.Visibility = Visibility.Collapsed;
+                        PendingReviewsCountBadge.Visibility = Visibility.Collapsed;
+                    }
+                });
+            }
+            catch
+            {
+                // Graceful fallback if database read fails
+            }
+        }
+
+        private void OnPendingReviewTapped(object sender, TappedRoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.Tag is SessionReviewAggregate agg)
+            {
+                var all = SessionService.Instance.GetAllSessions();
+                var session = all.FirstOrDefault(s => SpacedRepetitionDatabase.DeterministicGuid(s.Id) == agg.SessionId);
+                if (session != null)
+                {
+                    Frame.Navigate(typeof(ViewCanvasPage), session);
+                }
+            }
+        }
+
+        private void OnPendingReviewPointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accent) && accent is Brush b)
+                {
+                    border.BorderBrush = b;
+                }
+                if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out object? bg) && bg is Brush bgBrush)
+                {
+                    border.Background = bgBrush;
+                }
+            }
+        }
+
+        private void OnPendingReviewPointerExited(object sender, PointerRoutedEventArgs e)
         {
             if (sender is Border border)
             {

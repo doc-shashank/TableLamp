@@ -61,7 +61,7 @@ if ($IsccPath) {
     # Extract version dynamically from TableLamp.csproj
     [xml]$csprojXml = Get-Content "$ProjectFile"
     $AppVersion = $csprojXml.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
-    if (-not $AppVersion) { $AppVersion = "0.0.7.5" }
+    if (-not $AppVersion) { $AppVersion = "0.0.8.0" }
 
     Write-Host "Found Inno Setup compiler at: $IsccPath" -ForegroundColor Green
     Write-Host "App Version: $AppVersion" -ForegroundColor Cyan

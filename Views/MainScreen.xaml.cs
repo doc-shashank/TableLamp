@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using TableLamp.Controllers;
 using TableLamp.Models;
+using TableLamp.Services;
 using WinRT.Interop;
 
 namespace TableLamp.Views
@@ -29,6 +30,7 @@ namespace TableLamp.Views
             this.InitializeComponent();
 
             CheckAndSetArgument(modeArgument);
+            MainScreenVersionTextBlock.Text = $"v{AppUpdateService.CurrentVersionString}";
             ConfigureWindowSizing();
             WireNavigationEvents();
             WireCaptionButtons();

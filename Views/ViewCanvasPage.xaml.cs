@@ -35,6 +35,9 @@ namespace TableLamp.Views
             SessionInfoButton.Click += OnSessionInfoClicked;
             PreviousQuestionButton.Click += OnPreviousQuestionClicked;
             NextQuestionButton.Click += OnNextQuestionClicked;
+            RateHardButton.Click += (s, e) => OnRecallRated(RecallRating.Hard);
+            RateMediumButton.Click += (s, e) => OnRecallRated(RecallRating.Medium);
+            RateEasyButton.Click += (s, e) => OnRecallRated(RecallRating.Easy);
             TextRadioButton.Checked += (s, e) => OnViewModeChanged("Text");
             ImageRadioButton.Checked += (s, e) => OnViewModeChanged("Image");
         }
@@ -189,6 +192,12 @@ namespace TableLamp.Views
                 TextRadioButton.IsChecked = true;
                 UpdateViewMode("Text", question);
             }
+
+            CardSpacedRepetitionBorder.Visibility = Visibility.Visible;
+            RateHardButton.IsEnabled = true;
+            RateMediumButton.IsEnabled = true;
+            RateEasyButton.IsEnabled = true;
+            _ = UpdateCardSpacedRepetitionStatsAsync();
         }
 
         private void UpdateViewMode(string mode, SimpleQuestion question)
@@ -292,6 +301,173 @@ namespace TableLamp.Views
             {
                 TextRadioButton.IsChecked = true;
                 UpdateViewMode("Text", question);
+            }
+        }
+
+        private async Task UpdateCardSpacedRepetitionStatsAsync()
+        {
+            if (_session == null || _currentIndex < 0 || _currentIndex >= _session.questions.Count) return;
+
+            try
+            {
+                var q = _session.questions[_currentIndex];
+                string qidStr = (q as SimpleQuestion)?.Id ?? q.ToString() ?? Guid.NewGuid().ToString();
+                var state = await SpacedRepetitionManager.Instance.GetOrCreateCardStateAsync(qidStr, _session.Id);
+
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    CardIntervalTextBlock.Text = $"Interval: {state.IntervalDays:F1}d";
+                    CardEaseTextBlock.Text = $"Ease: {state.EaseFactor:F2}";
+                    CardRepsTextBlock.Text = $"Reps: {state.TotalRepetitions}";
+
+                    if (state.IsGraduated)
+                    {
+                        CardDueStatusBadge.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 16, 124, 65));
+                        CardDueStatusTextBlock.Foreground = new SolidColorBrush(Microsoft.UI.Colors.White);
+                        CardDueStatusTextBlock.Text = "Graduated";
+                    }
+                    else if (state.IsDue())
+                    {
+                        CardDueStatusBadge.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 255, 244, 206));
+                        CardDueStatusTextBlock.Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 141, 91, 0));
+                        CardDueStatusTextBlock.Text = "Due Now";
+                    }
+                    else
+                    {
+                        double daysRemaining = Math.Max(0.1, (state.NextDueDate - DateTimeOffset.UtcNow).TotalDays);
+                        CardDueStatusBadge.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 230, 240, 255));
+                        CardDueStatusTextBlock.Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 0, 103, 192));
+                        CardDueStatusTextBlock.Text = $"Due in {daysRemaining:F1}d";
+                    }
+                });
+            }
+            catch
+            {
+                // Fallback gracefully if database read encounters an issue
+            }
+        }
+
+        private async void OnRecallRated(RecallRating rating)
+        {
+            if (_session == null || _currentIndex < 0 || _currentIndex >= _session.questions.Count) return;
+
+            var q = _session.questions[_currentIndex];
+            string qidStr = (q as SimpleQuestion)?.Id ?? q.ToString() ?? Guid.NewGuid().ToString();
+
+            // Process review synchronously in memory, asynchronously persist to SQLite
+            await SpacedRepetitionManager.Instance.ProcessRecallRatingAsync(qidStr, _session.Id, rating);
+
+            int total = _session.questions.Count;
+            if (_currentIndex < total - 1)
+            {
+                _currentIndex++;
+                DisplayCurrentQuestion();
+            }
+            else
+            {
+                // Last question in session: calculate aggregate and display summary
+                var aggregate = await SpacedRepetitionManager.Instance.EvaluateSessionAsync(_session);
+                await ShowSessionCompletionDialogAsync(aggregate);
+            }
+        }
+
+        private async Task ShowSessionCompletionDialogAsync(SessionReviewAggregate aggregate)
+        {
+            var panel = new StackPanel { Spacing = 12, MinWidth = 340 };
+
+            var iconBorder = new Border
+            {
+                Width = 48,
+                Height = 48,
+                CornerRadius = new CornerRadius(12),
+                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 16, 124, 65)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 8),
+                Child = new FontIcon
+                {
+                    Glyph = "\uE73E",
+                    FontSize = 20,
+                    Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            panel.Children.Add(iconBorder);
+
+            var titleText = new TextBlock
+            {
+                Text = "Session Review Complete!",
+                FontSize = 18,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            panel.Children.Add(titleText);
+
+            var subtext = new TextBlock
+            {
+                Text = $"Great job! Active recall intervals and memory curves have been updated for all questions in '{_session?.DisplayTitle}'.",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            };
+            panel.Children.Add(subtext);
+
+            var statsBorder = new Border
+            {
+                Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14, 10, 14, 10),
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+
+            var statsStack = new StackPanel { Spacing = 6 };
+            void AddStatRow(string label, string val)
+            {
+                var g = new Grid();
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var l = new TextBlock { Text = label, FontSize = 12, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] };
+                var v = new TextBlock { Text = val, FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+                Grid.SetColumn(l, 0);
+                Grid.SetColumn(v, 1);
+                g.Children.Add(l);
+                g.Children.Add(v);
+                statsStack.Children.Add(g);
+            }
+
+            AddStatRow("Total Questions", aggregate.TotalQuestions.ToString());
+            AddStatRow("Graduated / Mastered", $"{aggregate.GraduatedQuestionsCount} / {aggregate.TotalQuestions}");
+            string nextDueStr = aggregate.NextSessionDue.HasValue
+                ? aggregate.NextSessionDue.Value.LocalDateTime.ToString("MMM d, yyyy h:mm tt")
+                : (aggregate.IsSessionCompleted ? "All Cards Graduated!" : "None");
+            AddStatRow("Next Scheduled Review", nextDueStr);
+
+            statsBorder.Child = statsStack;
+            panel.Children.Add(statsBorder);
+
+            var dialog = new ContentDialog
+            {
+                Title = "Active Recall Summary",
+                Content = panel,
+                PrimaryButtonText = "Back to Dashboard",
+                SecondaryButtonText = "Review Again",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+                else Frame.Navigate(typeof(DashboardPage));
+            }
+            else
+            {
+                _currentIndex = 0;
+                DisplayCurrentQuestion();
             }
         }
     }

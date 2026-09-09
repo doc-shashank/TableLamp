@@ -42,7 +42,7 @@ namespace TableLamp.Views
             }
         }
 
-        private void LoadSessionsForDate(DateTime date)
+        private async void LoadSessionsForDate(DateTime date)
         {
             SelectedDateHeaderText.Text = $"Sessions for {date:MMMM dd, yyyy}";
 
@@ -56,17 +56,65 @@ namespace TableLamp.Views
             SelfSessionsCountText.Text = selfSessions.Count.ToString();
             ClassSessionsCountText.Text = classSessions.Count.ToString();
 
-            bool hasAny = allSessions.Count > 0;
+            // Load pending reviews due on this date (or overdue if selected date is today)
+            var scheduledReviews = await SpacedRepetitionManager.Instance.GetReviewsForDateAsync(date);
+            ScheduledReviewsItemsControl.ItemsSource = scheduledReviews;
+            ScheduledReviewsCountText.Text = scheduledReviews.Count.ToString();
+
+            bool hasSessions = allSessions.Count > 0;
+            bool hasReviews = scheduledReviews.Count > 0;
+            bool hasAny = hasSessions || hasReviews;
+
+            ScheduledReviewsGroup.Visibility = hasReviews ? Visibility.Visible : Visibility.Collapsed;
             EmptyDayBorder.Visibility = hasAny ? Visibility.Collapsed : Visibility.Visible;
-            SelfSessionsGroup.Visibility = hasAny ? Visibility.Visible : Visibility.Collapsed;
-            ClassSessionsGroup.Visibility = hasAny ? Visibility.Visible : Visibility.Collapsed;
+            SelfSessionsGroup.Visibility = hasSessions ? Visibility.Visible : Visibility.Collapsed;
+            ClassSessionsGroup.Visibility = hasSessions ? Visibility.Visible : Visibility.Collapsed;
 
-            NoSelfSessionsText.Visibility = selfSessions.Count == 0 && hasAny ? Visibility.Visible : Visibility.Collapsed;
-            NoClassSessionsText.Visibility = classSessions.Count == 0 && hasAny ? Visibility.Visible : Visibility.Collapsed;
+            NoSelfSessionsText.Visibility = selfSessions.Count == 0 && hasSessions ? Visibility.Visible : Visibility.Collapsed;
+            NoClassSessionsText.Visibility = classSessions.Count == 0 && hasSessions ? Visibility.Visible : Visibility.Collapsed;
 
-            SelectedDateSubtext.Text = hasAny
-                ? $"{allSessions.Count} session{(allSessions.Count == 1 ? "" : "s")} recorded ({selfSessions.Count} Self, {classSessions.Count} Class)"
-                : "No study activity recorded on this day";
+            if (hasSessions && hasReviews)
+            {
+                SelectedDateSubtext.Text = $"{allSessions.Count} session(s) recorded • {scheduledReviews.Count} active recall review(s) pending";
+            }
+            else if (hasReviews)
+            {
+                SelectedDateSubtext.Text = $"{scheduledReviews.Count} active recall review(s) pending";
+            }
+            else if (hasSessions)
+            {
+                SelectedDateSubtext.Text = $"{allSessions.Count} session{(allSessions.Count == 1 ? "" : "s")} recorded ({selfSessions.Count} Self, {classSessions.Count} Class)";
+            }
+            else
+            {
+                SelectedDateSubtext.Text = "No study activity or scheduled reviews on this day";
+            }
+        }
+
+        private void OnScheduledReviewTapped(object sender, TappedRoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.Tag is SessionReviewAggregate agg)
+            {
+                NavigateToSessionByAggregate(agg);
+            }
+        }
+
+        private void OnStartReviewClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is SessionReviewAggregate agg)
+            {
+                NavigateToSessionByAggregate(agg);
+            }
+        }
+
+        private void NavigateToSessionByAggregate(SessionReviewAggregate agg)
+        {
+            var all = SessionService.Instance.GetAllSessions();
+            var session = all.FirstOrDefault(s => SpacedRepetitionDatabase.DeterministicGuid(s.Id) == agg.SessionId);
+            if (session != null)
+            {
+                Frame.Navigate(typeof(ViewCanvasPage), session);
+            }
         }
 
         private void OnSessionCardTapped(object sender, TappedRoutedEventArgs e)

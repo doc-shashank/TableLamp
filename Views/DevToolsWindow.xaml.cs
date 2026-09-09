@@ -1966,7 +1966,7 @@ namespace TableLamp.Views
             var sp = new StackPanel { Spacing = 10, Width = 380 };
             sp.Children.Add(new TextBlock
             {
-                Text = "Enter a new version number for publishing this workspace (e.g. 0.0.7.5). It will be recorded in WORKSPACE_INFO.json and included in the exported archive.",
+                Text = $"Enter a new version number for publishing this workspace (e.g. {AppUpdateService.CurrentVersionString}). It will be recorded in WORKSPACE_INFO.json and included in the exported archive.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12
             });
@@ -1983,7 +1983,7 @@ namespace TableLamp.Views
 
             var versionBox = new TextBox
             {
-                PlaceholderText = "e.g. 0.0.7.5",
+                PlaceholderText = $"e.g. {AppUpdateService.CurrentVersionString}",
                 Margin = new Thickness(0, 4, 0, 0)
             };
             sp.Children.Add(versionBox);
@@ -2015,7 +2015,7 @@ namespace TableLamp.Views
                 if (!System.Text.RegularExpressions.Regex.IsMatch(input, @"^[a-zA-Z0-9.\-_+]+$") || !System.Text.RegularExpressions.Regex.IsMatch(input, @"\d"))
                 {
                     args.Cancel = true;
-                    errorBlock.Text = "Please enter a valid version string containing numbers (e.g. 0.0.7.5).";
+                    errorBlock.Text = $"Please enter a valid version string containing numbers (e.g. {AppUpdateService.CurrentVersionString}).";
                     errorBlock.Visibility = Visibility.Visible;
                     return;
                 }
@@ -2110,7 +2110,7 @@ namespace TableLamp.Views
                 {
                     var defaultInfo = new Dictionary<string, object>
                     {
-                        ["version"] = "0.0.7.5",
+                        ["version"] = AppUpdateService.CurrentVersionString,
                         ["exported_at"] = DateTime.UtcNow.ToString("o")
                     };
                     File.WriteAllText(infoFile, System.Text.Json.JsonSerializer.Serialize(defaultInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
