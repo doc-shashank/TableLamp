@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using TableLamp.Models;
 using TableLamp.Services;
 using WinRT.Interop;
 
@@ -24,11 +25,6 @@ namespace TableLamp.Views
     {
         private AppWindow? _appWindow;
 
-        private string? _appUpdateDownloadUrl;
-        private string? _appUpdateLatestTag;
-        private bool _isAppDownloading;
-        private string? _downloadedInstallerPath;
-
         private string? _curatedUpdateTag;
         private bool _isCuratedDownloading;
 
@@ -37,7 +33,7 @@ namespace TableLamp.Views
             this.InitializeComponent();
 
             ConfigureLauncherWindow();
-            LauncherVersionTextBlock.Text = $"Version {AppUpdateService.CurrentVersionString}";
+            LauncherVersionTextBlock.Text = $"Version {AppVersionService.CurrentVersionString}";
             WireCardMouseEvents();
             WireCaptionButtons();
             InitializeUpdateNotifications();
@@ -45,7 +41,6 @@ namespace TableLamp.Views
 
         private void InitializeUpdateNotifications()
         {
-            AppUpdateNotificationBtn.Click += OnAppUpdateNotificationClicked;
             CuratedUpdateNotificationBtn.Click += OnCuratedUpdateNotificationClicked;
             _ = CheckAvailableUpdatesAsync();
         }
@@ -54,20 +49,7 @@ namespace TableLamp.Views
         {
             try
             {
-                // 1. Check App update
-                var appCheck = await AppUpdateService.CheckForUpdatesAsync();
-                if (appCheck.Success && appCheck.IsUpdateAvailable)
-                {
-                    _appUpdateDownloadUrl = appCheck.DownloadUrl;
-                    _appUpdateLatestTag = appCheck.LatestVersion;
-                    DispatcherQueue.TryEnqueue(() =>
-                    {
-                        AppUpdateNotificationText.Text = $"App {appCheck.LatestVersion}: Update Available (Click to Download)";
-                        AppUpdateNotificationBtn.Visibility = Visibility.Visible;
-                    });
-                }
-
-                // 2. Check Curated tags update
+                // Check Curated tags update
                 var curatedCheck = await CuratedContentUpdateService.CheckForUpdatesAsync();
                 if (curatedCheck.Success && curatedCheck.IsUpdateAvailable)
                 {
@@ -121,63 +103,6 @@ namespace TableLamp.Views
                 CuratedUpdateNotificationText.Text = $"Curated Tags: Error - {ex.Message}";
                 CuratedUpdateNotificationBtn.IsEnabled = true;
                 _isCuratedDownloading = false;
-            }
-        }
-
-        private async void OnAppUpdateNotificationClicked(object sender, RoutedEventArgs e)
-        {
-            if (!string.IsNullOrEmpty(_downloadedInstallerPath) && File.Exists(_downloadedInstallerPath))
-            {
-                try
-                {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_downloadedInstallerPath) { UseShellExecute = true });
-                }
-                catch (Exception ex)
-                {
-                    AppUpdateNotificationText.Text = $"Launch failed: {ex.Message}";
-                }
-                return;
-            }
-
-            if (_isAppDownloading || string.IsNullOrEmpty(_appUpdateDownloadUrl)) return;
-            _isAppDownloading = true;
-            AppUpdateNotificationBtn.IsEnabled = false;
-
-            string tag = _appUpdateLatestTag ?? "latest";
-            AppUpdateNotificationText.Text = $"App {tag}: Downloading...0%";
-
-            string installerPath = Path.Combine(Path.GetTempPath(), $"TableLamp-Setup-{tag}.exe");
-
-            var progress = new Progress<double>(pct =>
-            {
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    AppUpdateNotificationText.Text = $"App {tag}: Downloading...{(int)pct}%";
-                });
-            });
-
-            try
-            {
-                bool ok = await AppUpdateService.DownloadInstallerAsync(_appUpdateDownloadUrl, installerPath, progress);
-                if (ok && File.Exists(installerPath))
-                {
-                    _downloadedInstallerPath = installerPath;
-                    AppUpdateNotificationText.Text = $"App {tag}: Downloaded! Click to Install";
-                    AppUpdateNotificationBtn.IsEnabled = true;
-                    _isAppDownloading = false;
-                }
-                else
-                {
-                    AppUpdateNotificationText.Text = $"App {tag}: Download failed. Click to retry.";
-                    AppUpdateNotificationBtn.IsEnabled = true;
-                    _isAppDownloading = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                AppUpdateNotificationText.Text = $"App {tag}: Download error - {ex.Message}";
-                AppUpdateNotificationBtn.IsEnabled = true;
-                _isAppDownloading = false;
             }
         }
 
@@ -277,21 +202,31 @@ namespace TableLamp.Views
         private void WireCardMouseEvents()
         {
             // 1. Basic Card - Fully Interactive Button
-            BasicCard.PointerEntered += OnBasicPointerEntered;
-            BasicCard.PointerExited += OnBasicPointerExited;
-            BasicCard.PointerPressed += OnBasicPointerPressed;
-            BasicCard.PointerReleased += OnBasicPointerReleased;
-            BasicCard.Tapped += OnBasicCardTapped;
+            BasicCard.PointerEntered += (s, e) => OnCardPointerEntered(BasicCard);
+            BasicCard.PointerExited += (s, e) => ResetCardStyle(BasicCard);
+            BasicCard.PointerPressed += (s, e) => OnCardPointerPressed(BasicCard);
+            BasicCard.PointerReleased += (s, e) => ResetCardStyle(BasicCard);
+            BasicCard.Tapped += (s, e) => LaunchMainScreen(LauncherMode.Basic);
 
             // 2. Advanced Card - Non-interactable (for now)
             AdvancedCard.PointerEntered += OnDisabledCardPointerEntered;
             AdvancedCard.PointerExited += OnDisabledCardPointerExited;
 
-            // 3. Generator Card - Non-interactable (for now)
-            GeneratorCard.PointerEntered += OnDisabledCardPointerEntered;
-            GeneratorCard.PointerExited += OnDisabledCardPointerExited;
+            // 3. Generator Card - Interactive Button
+            GeneratorCard.PointerEntered += (s, e) => OnCardPointerEntered(GeneratorCard);
+            GeneratorCard.PointerExited += (s, e) => ResetCardStyle(GeneratorCard);
+            GeneratorCard.PointerPressed += (s, e) => OnCardPointerPressed(GeneratorCard);
+            GeneratorCard.PointerReleased += (s, e) => ResetCardStyle(GeneratorCard);
+            GeneratorCard.Tapped += (s, e) => LaunchMainScreen(LauncherMode.Generator);
 
-            // 4. Dev Tools Button
+            // 4. Library Card - Interactive Button
+            LibraryCard.PointerEntered += (s, e) => OnCardPointerEntered(LibraryCard);
+            LibraryCard.PointerExited += (s, e) => ResetCardStyle(LibraryCard);
+            LibraryCard.PointerPressed += (s, e) => OnCardPointerPressed(LibraryCard);
+            LibraryCard.PointerReleased += (s, e) => ResetCardStyle(LibraryCard);
+            LibraryCard.Tapped += (s, e) => LaunchMainScreen(LauncherMode.Library);
+
+            // 5. Dev Tools Button
             DevToolsButton.Click += OnDevToolsButtonClicked;
         }
 
@@ -302,53 +237,52 @@ namespace TableLamp.Views
             devTools.Activate();
         }
 
-        #region Basic Card Interactions
+        #region Card Interactions
 
-        private void OnBasicPointerEntered(object sender, PointerRoutedEventArgs e)
+        private void OnCardPointerEntered(Border card)
         {
             if (Application.Current.Resources.TryGetValue("AccentFillColorDefaultBrush", out object? accentBrush) && accentBrush is Brush brush)
             {
-                BasicCard.BorderBrush = brush;
-                BasicCard.BorderThickness = new Thickness(1.5);
+                card.BorderBrush = brush;
+                card.BorderThickness = new Thickness(1.5);
             }
             if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out object? bgBrush) && bgBrush is Brush hoverBg)
             {
-                BasicCard.Background = hoverBg;
+                card.Background = hoverBg;
             }
         }
 
-        private void OnBasicPointerExited(object sender, PointerRoutedEventArgs e)
+        private void OnCardPointerPressed(Border card)
         {
-            ResetBasicCardStyle();
+            card.BorderThickness = new Thickness(1.5);
         }
 
-        private void OnBasicPointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            BasicCard.BorderThickness = new Thickness(1.5);
-        }
-
-        private void OnBasicPointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            ResetBasicCardStyle();
-        }
-
-        private void ResetBasicCardStyle()
+        private void ResetCardStyle(Border card)
         {
             if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object? strokeBrush) && strokeBrush is Brush stroke)
             {
-                BasicCard.BorderBrush = stroke;
-                BasicCard.BorderThickness = new Thickness(1.5);
+                card.BorderBrush = stroke;
+                card.BorderThickness = new Thickness(1.5);
             }
             if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object? bgBrush) && bgBrush is Brush bg)
             {
-                BasicCard.Background = bg;
+                card.Background = bg;
             }
         }
 
-        private void OnBasicCardTapped(object sender, TappedRoutedEventArgs e)
+        private void OnBasicCardButtonClicked(object sender, RoutedEventArgs e)
         {
-            // Open maximized non-resizable MainScreen with "Basic" argument
-            LaunchMainScreen("Basic");
+            LaunchMainScreen(LauncherMode.Basic);
+        }
+
+        private void OnGeneratorCardButtonClicked(object sender, RoutedEventArgs e)
+        {
+            LaunchMainScreen(LauncherMode.Generator);
+        }
+
+        private void OnLibraryCardButtonClicked(object sender, RoutedEventArgs e)
+        {
+            LaunchMainScreen(LauncherMode.Library);
         }
 
         #endregion

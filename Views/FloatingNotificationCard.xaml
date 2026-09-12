@@ -9,6 +9,7 @@
     VerticalAlignment="Top">
 
     <Grid x:Name="ToastRoot"
+          AutomationProperties.AutomationId="FloatingNotification_Root"
           Visibility="Collapsed"
           Margin="0,0,0,0">
         <!-- Whitish soft shadow / elevated glow border -->
@@ -46,10 +47,12 @@
                     <!-- Message Content -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                         <TextBlock x:Name="ToastTitleText"
+                                   AutomationProperties.AutomationId="FloatingNotification_TitleText"
                                    FontWeight="SemiBold"
                                    FontSize="13"
                                    Visibility="Collapsed" />
                         <TextBlock x:Name="ToastMessageText"
+                                   AutomationProperties.AutomationId="FloatingNotification_MessageText"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -57,6 +60,7 @@
 
                     <!-- Dismiss Button ('X') -->
                     <Button x:Name="DismissToastButton"
+                            AutomationProperties.AutomationId="FloatingNotification_DismissButton"
                             Grid.Column="2"
                             Style="{ThemeResource SubtleButtonStyle}"
                             Width="28"

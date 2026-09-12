@@ -1966,7 +1966,7 @@ namespace TableLamp.Views
             var sp = new StackPanel { Spacing = 10, Width = 380 };
             sp.Children.Add(new TextBlock
             {
-                Text = $"Enter a new version number for publishing this workspace (e.g. {AppUpdateService.CurrentVersionString}). It will be recorded in WORKSPACE_INFO.json and included in the exported archive.",
+                Text = $"Enter a new version number for publishing this workspace (e.g. {AppVersionService.CurrentVersionString}). It will be recorded in WORKSPACE_INFO.json and included in the exported archive.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12
             });
@@ -1983,7 +1983,7 @@ namespace TableLamp.Views
 
             var versionBox = new TextBox
             {
-                PlaceholderText = $"e.g. {AppUpdateService.CurrentVersionString}",
+                PlaceholderText = $"e.g. {AppVersionService.CurrentVersionString}",
                 Margin = new Thickness(0, 4, 0, 0)
             };
             sp.Children.Add(versionBox);
@@ -2015,7 +2015,7 @@ namespace TableLamp.Views
                 if (!System.Text.RegularExpressions.Regex.IsMatch(input, @"^[a-zA-Z0-9.\-_+]+$") || !System.Text.RegularExpressions.Regex.IsMatch(input, @"\d"))
                 {
                     args.Cancel = true;
-                    errorBlock.Text = $"Please enter a valid version string containing numbers (e.g. {AppUpdateService.CurrentVersionString}).";
+                    errorBlock.Text = $"Please enter a valid version string containing numbers (e.g. {AppVersionService.CurrentVersionString}).";
                     errorBlock.Visibility = Visibility.Visible;
                     return;
                 }
@@ -2023,7 +2023,7 @@ namespace TableLamp.Views
                 if (!string.IsNullOrWhiteSpace(existingVersion))
                 {
                     if (string.Equals(input, existingVersion, StringComparison.OrdinalIgnoreCase) ||
-                        AppUpdateService.CompareVersions(input, existingVersion) == 0)
+                        AppVersionService.CompareVersions(input, existingVersion) == 0)
                     {
                         args.Cancel = true;
                         errorBlock.Text = $"Version '{input}' already matches the existing version ({existingVersion}). Please enter a new, unique version number.";
@@ -2110,7 +2110,7 @@ namespace TableLamp.Views
                 {
                     var defaultInfo = new Dictionary<string, object>
                     {
-                        ["version"] = AppUpdateService.CurrentVersionString,
+                        ["version"] = AppVersionService.CurrentVersionString,
                         ["exported_at"] = DateTime.UtcNow.ToString("o")
                     };
                     File.WriteAllText(infoFile, System.Text.Json.JsonSerializer.Serialize(defaultInfo, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));

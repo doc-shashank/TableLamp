@@ -18,7 +18,7 @@ namespace TableLamp.Tests
         [Fact]
         public void VersionConstants_AreUpdatedToV0075OrGreater()
         {
-            Assert.True(AppUpdateService.CompareVersions(AppUpdateService.CurrentVersionString, "0.0.7.5") >= 0);
+            Assert.True(AppVersionService.CompareVersions(AppVersionService.CurrentVersionString, "0.0.7.5") >= 0);
             Assert.True(new AppSettings().CuratedContentVersion.StartsWith("v0.0."));
             AppSettingsService.Instance.CuratedContentVersion = "v0.0.7.5";
             Assert.Equal("v0.0.7.5", AppSettingsService.Instance.CuratedContentVersion);
@@ -34,17 +34,17 @@ namespace TableLamp.Tests
 
             Assert.True(File.Exists(issPath));
             string issContent = File.ReadAllText(issPath);
-            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\""));
+            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\"") || issContent.Contains("MyAppVersion \"0.0.8.1\"") || issContent.Contains("MyAppVersion \"0.0.8.2\""));
 
             Assert.True(File.Exists(csprojPath));
             string csprojContent = File.ReadAllText(csprojPath);
-            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>"));
-            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>"));
-            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>"));
+            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>") || csprojContent.Contains("<Version>0.0.8.1</Version>") || csprojContent.Contains("<Version>0.0.8.2</Version>"));
+            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.1</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.2</AssemblyVersion>"));
+            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.1</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.2</FileVersion>"));
 
             Assert.True(File.Exists(buildPs1Path));
             string ps1Content = File.ReadAllText(buildPs1Path);
-            Assert.True(ps1Content.Contains("0.0.7.5") || ps1Content.Contains("0.0.8.0"));
+            Assert.True(ps1Content.Contains("0.0.7.5") || ps1Content.Contains("0.0.8.0") || ps1Content.Contains("0.0.8.1") || ps1Content.Contains("0.0.8.2"));
         }
 
         [Fact]
@@ -114,7 +114,7 @@ namespace TableLamp.Tests
             else if (!string.IsNullOrWhiteSpace(existingVersion))
             {
                 if (string.Equals(input, existingVersion, StringComparison.OrdinalIgnoreCase) ||
-                    AppUpdateService.CompareVersions(input, existingVersion) == 0)
+                    AppVersionService.CompareVersions(input, existingVersion) == 0)
                 {
                     isValid = false;
                 }
@@ -142,11 +142,11 @@ namespace TableLamp.Tests
             string destFile = Path.Combine(Path.GetTempPath(), $"progress_test_{Guid.NewGuid():N}.bin");
             try
             {
-                bool ok = await AppUpdateService.DownloadInstallerAsync(
+                bool ok = await CuratedContentUpdateService.TryDownloadFileAsync(
+                    httpClient,
                     "https://github.com/doc-shashank/table-lamp/releases/download/v0.0.7.5/test.exe",
                     destFile,
-                    progress,
-                    httpClient);
+                    progress);
 
                 Assert.True(ok);
                 Assert.True(File.Exists(destFile));

@@ -20,6 +20,7 @@
 
                     <StackPanel Grid.Column="0" Spacing="6">
                         <Button x:Name="BackButton"
+                                AutomationProperties.AutomationId="SessionDetails_BackButton"
                                 Style="{ThemeResource SubtleButtonStyle}"
                                 Padding="8,6"
                                 Margin="0,0,0,4"
@@ -30,13 +31,13 @@
                             </StackPanel>
                         </Button>
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                            <TextBlock Text="Create a New Session" FontSize="26" FontWeight="Bold" />
+                            <TextBlock AutomationProperties.AutomationId="SessionDetails_HeaderTitle" Text="Create a New Session" FontSize="26" FontWeight="Bold" />
                             <Border x:Name="HeaderModeBadgeBorder"
                                     Background="{ThemeResource AccentFillColorDefaultBrush}"
                                     CornerRadius="6"
                                     Padding="8,3"
                                     VerticalAlignment="Center">
-                                <TextBlock x:Name="HeaderModeBadgeText" Text="Curated" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock x:Name="HeaderModeBadgeText" AutomationProperties.AutomationId="SessionDetails_ModeBadgeText" Text="Curated" FontSize="12" FontWeight="SemiBold" Foreground="White" />
                             </Border>
                         </StackPanel>
                         <TextBlock x:Name="NewSessionHeaderSubtext"
@@ -56,6 +57,7 @@
                             Padding="3">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <Button x:Name="SelfSessionButton"
+                                    AutomationProperties.AutomationId="SessionDetails_SelfSessionButton"
                                     Style="{ThemeResource AccentButtonStyle}"
                                     Padding="14,6"
                                     CornerRadius="6">
@@ -65,6 +67,7 @@
                                 </StackPanel>
                             </Button>
                             <Button x:Name="ClassSessionButton"
+                                    AutomationProperties.AutomationId="SessionDetails_ClassSessionButton"
                                     Style="{ThemeResource SubtleButtonStyle}"
                                     Padding="14,6"
                                     CornerRadius="6">
@@ -215,10 +218,12 @@
                     <!-- Right: Cancel and Start Action Buttons -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Bottom">
                         <Button x:Name="CancelButton"
+                                AutomationProperties.AutomationId="SessionDetails_CancelButton"
                                 Content="Cancel"
                                 Style="{ThemeResource DefaultButtonStyle}"
                                 Padding="20,10" />
                         <Button x:Name="NextButton"
+                                AutomationProperties.AutomationId="SessionDetails_NextButton"
                                 Content="Start"
                                 Style="{ThemeResource AccentButtonStyle}"
                                 Padding="28,10" />

@@ -22,6 +22,7 @@
             </Grid.ColumnDefinitions>
 
             <Button x:Name="BackToLauncherButton"
+                    AutomationProperties.AutomationId="LauncherSettings_BackButton"
                     Grid.Column="0"
                     Style="{ThemeResource SubtleButtonStyle}"
                     Padding="10,6"
@@ -37,7 +38,7 @@
                 <Border Width="28" Height="28" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
                     <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <TextBlock Text="Launcher Settings" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
+                <TextBlock AutomationProperties.AutomationId="LauncherSettings_HeaderTitle" Text="Launcher Settings" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
@@ -48,7 +49,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Card 1: App Version & Updates -->
+            <!-- Card 1: About Table Lamp -->
             <Border Grid.Column="0"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -60,12 +61,12 @@
                     <StackPanel Grid.Row="0" Spacing="10">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
-                                <FontIcon Glyph="&#xE895;" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <FontIcon Glyph="&#xE781;" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="15" />
+                                <TextBlock Text="About Table Lamp" FontWeight="SemiBold" FontSize="15" />
                                 <TextBlock x:Name="AppVersionBadgeText"
-                                           Text="Current Version: v0.0.7.4"
+                                           Text="Current Version: v0.0.8.2"
                                            FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -79,35 +80,12 @@
                     <!-- Card Body / Status Details -->
                     <ScrollViewer Grid.Row="1" Margin="0,12,0,12" VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Name="AppUpdateStatusText"
-                                       Text="Checks GitHub Releases for new Table Lamp desktop builds."
+                            <TextBlock Text="Table Lamp is an intelligent, distraction-free study companion designed to empower focused learning and effective revision."
                                        FontSize="12"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap" />
-
-                            <HyperlinkButton x:Name="ViewReleaseUrlButton"
-                                             Content="Open Latest Release in Browser"
-                                             Visibility="Collapsed"
-                                             HorizontalAlignment="Left"
-                                             Padding="0" />
                         </StackPanel>
                     </ScrollViewer>
-
-                    <!-- Card Footer Actions -->
-                    <Grid Grid.Row="2">
-                        <Button x:Name="CheckAppUpdateButton"
-                                Content="Check for App Updates"
-                                Style="{ThemeResource AccentButtonStyle}"
-                                HorizontalAlignment="Stretch"
-                                Padding="12,8" />
-                        <ProgressRing x:Name="AppUpdateProgressRing"
-                                      Width="24"
-                                      Height="24"
-                                      IsActive="False"
-                                      Visibility="Collapsed"
-                                      HorizontalAlignment="Right"
-                                      Margin="0,0,12,0" />
-                    </Grid>
                 </Grid>
             </Border>
 
@@ -159,6 +137,7 @@
                     <!-- Card Footer Actions -->
                     <Grid Grid.Row="2">
                         <Button x:Name="SyncCuratedPresetsButton"
+                                AutomationProperties.AutomationId="LauncherSettings_SyncCuratedPresetsButton"
                                 Content="Sync Curated Presets"
                                 Style="{ThemeResource AccentButtonStyle}"
                                 HorizontalAlignment="Stretch"
@@ -178,6 +157,7 @@
         <!-- Status Notification (Row 2) -->
         <StackPanel Grid.Row="2" Margin="0,8,0,0">
             <InfoBar x:Name="LauncherSettingsInfoBar"
+                     AutomationProperties.AutomationId="LauncherSettings_InfoBar"
                      IsOpen="False"
                      IsIconVisible="True"
                      IsClosable="True" />

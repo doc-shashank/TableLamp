@@ -8,7 +8,6 @@ namespace TableLamp.Views
     public sealed partial class LauncherSettingsPage : Page
     {
         public event Action? BackRequested;
-        private string? _latestReleaseUrl;
 
         public LauncherSettingsPage()
         {
@@ -20,8 +19,8 @@ namespace TableLamp.Views
 
         private void InitializeUi()
         {
-            AppVersionBadgeText.Text = $"Current Version: v{AppUpdateService.CurrentVersionString}";
-            AppRepoInfoText.Text = $"Repository: {AppUpdateService.RepoOwner}/{AppUpdateService.RepoName}";
+            AppVersionBadgeText.Text = $"Current Version: v{AppVersionService.CurrentVersionString}";
+            AppRepoInfoText.Text = "Repository: doc-shashank/table-lamp";
 
             RefreshCuratedInfo();
         }
@@ -49,58 +48,7 @@ namespace TableLamp.Views
         private void WireEvents()
         {
             BackToLauncherButton.Click += (s, e) => BackRequested?.Invoke();
-
-            CheckAppUpdateButton.Click += OnCheckAppUpdateClicked;
             SyncCuratedPresetsButton.Click += OnSyncCuratedPresetsClicked;
-            ViewReleaseUrlButton.Click += OnViewReleaseUrlClicked;
-        }
-
-        private async void OnCheckAppUpdateClicked(object sender, RoutedEventArgs e)
-        {
-            CheckAppUpdateButton.IsEnabled = false;
-            AppUpdateProgressRing.IsActive = true;
-            AppUpdateProgressRing.Visibility = Visibility.Visible;
-            AppUpdateStatusText.Text = "Checking GitHub for latest application release...";
-            ViewReleaseUrlButton.Visibility = Visibility.Collapsed;
-
-            try
-            {
-                var result = await AppUpdateService.CheckForUpdatesAsync();
-                if (result.Success)
-                {
-                    if (result.IsUpdateAvailable)
-                    {
-                        AppUpdateStatusText.Text = $"Update available: {result.LatestVersion}! {result.ReleaseTitle}";
-                        _latestReleaseUrl = result.ReleaseUrl;
-                        if (!string.IsNullOrWhiteSpace(_latestReleaseUrl))
-                        {
-                            ViewReleaseUrlButton.Visibility = Visibility.Visible;
-                        }
-                        ShowBanner($"A new version ({result.LatestVersion}) is available on GitHub!", InfoBarSeverity.Informational);
-                    }
-                    else
-                    {
-                        AppUpdateStatusText.Text = $"You are running the latest version of Table Lamp (v{AppUpdateService.CurrentVersionString}).";
-                        ShowBanner($"Table Lamp is up to date (v{AppUpdateService.CurrentVersionString}).", InfoBarSeverity.Success);
-                    }
-                }
-                else
-                {
-                    AppUpdateStatusText.Text = result.ErrorMessage ?? "Could not retrieve update information.";
-                    ShowBanner(result.ErrorMessage ?? "Failed to check for updates.", InfoBarSeverity.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppUpdateStatusText.Text = $"Error: {ex.Message}";
-                ShowBanner($"Update check encountered an error: {ex.Message}", InfoBarSeverity.Error);
-            }
-            finally
-            {
-                AppUpdateProgressRing.IsActive = false;
-                AppUpdateProgressRing.Visibility = Visibility.Collapsed;
-                CheckAppUpdateButton.IsEnabled = true;
-            }
         }
 
         private async void OnSyncCuratedPresetsClicked(object sender, RoutedEventArgs e)
@@ -146,13 +94,7 @@ namespace TableLamp.Views
             }
         }
 
-        private async void OnViewReleaseUrlClicked(object sender, RoutedEventArgs e)
-        {
-            if (!string.IsNullOrWhiteSpace(_latestReleaseUrl) && Uri.TryCreate(_latestReleaseUrl, UriKind.Absolute, out var uri))
-            {
-                await Windows.System.Launcher.LaunchUriAsync(uri);
-            }
-        }
+
 
         private void ShowBanner(string message, InfoBarSeverity severity)
         {

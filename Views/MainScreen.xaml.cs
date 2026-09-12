@@ -30,7 +30,7 @@ namespace TableLamp.Views
             this.InitializeComponent();
 
             CheckAndSetArgument(modeArgument);
-            MainScreenVersionTextBlock.Text = $"v{AppUpdateService.CurrentVersionString}";
+            MainScreenVersionTextBlock.Text = $"v{AppVersionService.CurrentVersionString}";
             ConfigureWindowSizing();
             WireNavigationEvents();
             WireCaptionButtons();
@@ -42,6 +42,30 @@ namespace TableLamp.Views
         public void CheckAndSetArgument(string? argument)
         {
             InvocationMode = LauncherMode.Normalize(argument);
+            UpdateNavigationForMode();
+        }
+
+        private void UpdateNavigationForMode()
+        {
+            if (ModeBadgeTextBlock != null)
+            {
+                ModeBadgeTextBlock.Text = InvocationMode;
+            }
+
+            if (string.Equals(InvocationMode, LauncherMode.Generator, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(InvocationMode, LauncherMode.Library, StringComparison.OrdinalIgnoreCase))
+            {
+                // Header of MainScreen will just be a dashboard icon
+                if (CalendarNavButton != null) CalendarNavButton.Visibility = Visibility.Collapsed;
+                if (SettingsNavButton != null) SettingsNavButton.Visibility = Visibility.Collapsed;
+                if (DashboardNavButton != null) DashboardNavButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                if (CalendarNavButton != null) CalendarNavButton.Visibility = Visibility.Visible;
+                if (SettingsNavButton != null) SettingsNavButton.Visibility = Visibility.Visible;
+                if (DashboardNavButton != null) DashboardNavButton.Visibility = Visibility.Visible;
+            }
         }
 
         private bool _isReturningToLauncher = false;

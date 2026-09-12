@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -90,6 +91,53 @@ namespace TableLamp.Services
             return $"https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}";
         }
 
+        public static string? ExtractTagFromResponse(HttpResponseMessage response)
+        {
+            if (response == null) return null;
+            if (response.Headers.Location != null)
+            {
+                string? locTag = ExtractTagFromReleaseUrl(response.Headers.Location.ToString());
+                if (!string.IsNullOrWhiteSpace(locTag)) return locTag;
+            }
+            var finalUrl = response.RequestMessage?.RequestUri?.ToString();
+            if (string.IsNullOrWhiteSpace(finalUrl)) return null;
+            return ExtractTagFromReleaseUrl(finalUrl);
+        }
+
+        public static string? ExtractTagFromReleaseUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            const string marker = "/releases/tag/";
+            int idx = url.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                string tag = url.Substring(idx + marker.Length).Trim().TrimEnd('/');
+                int qIdx = tag.IndexOf('?');
+                if (qIdx >= 0) tag = tag.Substring(0, qIdx);
+                int hIdx = tag.IndexOf('#');
+                if (hIdx >= 0) tag = tag.Substring(0, hIdx);
+                return IsValidTag(tag) ? tag : null;
+            }
+            return null;
+        }
+
+        public static bool IsValidTag(string? tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag)) return false;
+            if (tag.Contains('/') || tag.Contains('\\') || tag.Contains("..")) return false;
+            return Regex.IsMatch(tag, @"^[a-zA-Z0-9_\.\+\-]+$");
+        }
+
+        public static bool IsTrustedGitHubUrl(Uri uri)
+        {
+            if (uri == null || uri.Scheme != Uri.UriSchemeHttps) return false;
+            string host = uri.Host.ToLowerInvariant();
+            return host == "github.com" ||
+                   host.EndsWith(".github.com") ||
+                   host == "objects.githubusercontent.com" ||
+                   (host.EndsWith(".amazonaws.com") && host.Contains("github-production-release-asset"));
+        }
+
         /// <summary>
         /// Checks GitHub for the latest release of Curated Content using the zero-API 302 redirect trick.
         /// Thread-safe and rate-limit-free.
@@ -139,7 +187,7 @@ namespace TableLamp.Services
                         };
                     }
 
-                    string? latestTag = AppUpdateService.ExtractTagFromResponse(response);
+                    string? latestTag = ExtractTagFromResponse(response);
 
                     if (string.IsNullOrWhiteSpace(latestTag))
                     {
@@ -155,7 +203,7 @@ namespace TableLamp.Services
                     }
 
                     bool isDbEmpty = PresetTagDatabase.Instance.IsEmpty;
-                    bool isNewerVersion = AppUpdateService.CompareVersions(latestTag, currentVersion) > 0;
+                    bool isNewerVersion = AppVersionService.CompareVersions(latestTag, currentVersion) > 0;
                     bool isUpdateAvailable = isDbEmpty || isNewerVersion;
                     string assetUrl = BuildAssetDownloadUrl(RepoOwner, RepoName, latestTag, $"{RepoName}.zip");
                     string archiveUrl = BuildArchiveDownloadUrl(RepoOwner, RepoName, latestTag);
@@ -260,7 +308,7 @@ namespace TableLamp.Services
                 }
 
                 string currentVer = AppSettingsService.Instance.CuratedContentVersion;
-                if (!PresetTagDatabase.Instance.IsEmpty && !string.IsNullOrWhiteSpace(releaseTag) && AppUpdateService.CompareVersions(releaseTag, currentVer) <= 0)
+                if (!PresetTagDatabase.Instance.IsEmpty && !string.IsNullOrWhiteSpace(releaseTag) && AppVersionService.CompareVersions(releaseTag, currentVer) <= 0)
                 {
                     return new CuratedUpdateApplyResult
                     {
@@ -343,9 +391,9 @@ namespace TableLamp.Services
             }
         }
 
-        private static async Task<bool> TryDownloadFileAsync(HttpClient client, string url, string destinationPath, IProgress<double>? progress, CancellationToken ct)
+        public static async Task<bool> TryDownloadFileAsync(HttpClient client, string url, string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default)
         {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !AppUpdateService.IsTrustedGitHubUrl(uri))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !IsTrustedGitHubUrl(uri))
             {
                 return false;
             }

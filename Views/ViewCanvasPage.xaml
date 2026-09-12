@@ -154,7 +154,8 @@
                 </Border>
 
                 <!-- Spaced Repetition Active Recall Rating Bar -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                <Border x:Name="RatingBarBorder"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="12"

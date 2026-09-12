@@ -36,6 +36,7 @@
 
                             <Button Grid.Column="1"
                                     x:Name="ViewStatisticsButton"
+                                    AutomationProperties.AutomationId="Settings_ViewStatisticsButton"
                                     Click="OnViewStatisticsClicked"
                                     Style="{ThemeResource DefaultButtonStyle}"
                                     Padding="12,6"
@@ -151,6 +152,7 @@
 
                             <Button Grid.Column="1"
                                     x:Name="UpdateCuratedPresetsButton"
+                                    AutomationProperties.AutomationId="Settings_UpdateCuratedPresetsButton"
                                     Content="Check for Updates"
                                     Style="{ThemeResource AccentButtonStyle}"
                                     IsEnabled="True"
@@ -179,6 +181,7 @@
                             </StackPanel>
 
                             <ComboBox x:Name="NotificationDurationComboBox"
+                                      AutomationProperties.AutomationId="Settings_NotificationDurationComboBox"
                                       Grid.Column="1"
                                       Width="160"
                                       VerticalAlignment="Center">
@@ -192,34 +195,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- App Updates Card -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="24">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                            <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
-                                <FontIcon Glyph="&#xE895;" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="App Updates" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock x:Name="AppUpdatesVersionText"
-                                           Text="Check for the latest Table Lamp releases on GitHub. Current version: v0.0.7.4"
-                                           FontSize="12"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-                        </StackPanel>
 
-                        <Button x:Name="CheckForUpdatesButton"
-                                Grid.Column="1"
-                                Content="Check for updates"
-                                Style="{ThemeResource AccentButtonStyle}"
-                                Padding="16,8"
-                                VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
 
                 <!-- Format Database / Maintenance Card -->
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -240,6 +216,7 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
                             <Button x:Name="FormatCuratedDatabaseButton"
+                                    AutomationProperties.AutomationId="Settings_FormatCuratedDatabaseButton"
                                     Style="{ThemeResource SubtleButtonStyle}"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                     Padding="14,8">
@@ -250,6 +227,7 @@
                             </Button>
 
                             <Button x:Name="FormatCustomDatabaseButton"
+                                    AutomationProperties.AutomationId="Settings_FormatCustomDatabaseButton"
                                     Style="{ThemeResource SubtleButtonStyle}"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                     Padding="14,8">
@@ -260,6 +238,7 @@
                             </Button>
 
                             <Button x:Name="FormatAllDatabasesButton"
+                                    AutomationProperties.AutomationId="Settings_FormatAllDatabasesButton"
                                     Content="Format Both Databases"
                                     Style="{ThemeResource DefaultButtonStyle}"
                                     Padding="14,8" />

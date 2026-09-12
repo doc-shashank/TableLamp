@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+        "label": "build",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "build",
+            "${workspaceFolder}/TableLamp.csproj",
+            "/property:GenerateFullPaths=true",
+            "/consoleloggerparameters:NoSummary;ForceNoAlign"
+        ],
+        "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Run Table Lamp (After Build)",
+      "dependsOn": "build",
+      "type": "shell",
+      "command": "cmd /c start \"\" \"${workspaceFolder}\\bin\\Debug\\net8.0-windows10.0.26100.0\\win-x64\\TableLamp.exe\"",
+      "options": {
+        "cwd": "${workspaceFolder}\\bin\\Debug\\net8.0-windows10.0.26100.0\\win-x64"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Table Lamp (Without Building)",
+      "type": "shell",
+      "command": "cmd /c start \"\" \"${workspaceFolder}\\bin\\Debug\\net8.0-windows10.0.26100.0\\win-x64\\TableLamp.exe\"",
+      "options": {
+        "cwd": "${workspaceFolder}\\bin\\Debug\\net8.0-windows10.0.26100.0\\win-x64"
+      },
+      "problemMatcher": []
+    },
+    {
+        "label": "publish",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "publish",
+            "${workspaceFolder}/TableLamp.csproj",
+            "/property:GenerateFullPaths=true",
+            "/consoleloggerparameters:NoSummary;ForceNoAlign"
+        ],
+        "problemMatcher": "$msCompile"
+    },
+    {
+        "label": "watch",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "watch",
+            "run",
+            "--project",
+            "${workspaceFolder}/TableLamp.csproj"
+        ],
+        "problemMatcher": "$msCompile"
+    }
+  ]
+}

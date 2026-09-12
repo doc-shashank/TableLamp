@@ -20,12 +20,18 @@ namespace TableLamp.Services
 
         public event Action? SessionsChanged;
 
-        public SessionService()
+        public SessionService() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TableLamp", "sessions.json"))
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string dir = Path.Combine(appData, "TableLamp");
-            Directory.CreateDirectory(dir);
-            _storagePath = Path.Combine(dir, "sessions.json");
+        }
+
+        public SessionService(string storagePath)
+        {
+            _storagePath = storagePath;
+            string? dir = Path.GetDirectoryName(_storagePath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
 
             LoadSessions();
         }
@@ -37,7 +43,14 @@ namespace TableLamp.Services
 
         public IReadOnlyList<BasicSessionBundle> GetRecentSessions(int count = 5)
         {
-            return _sessions.OrderByDescending(s => s.creation_date).Take(count).ToList().AsReadOnly();
+            // The Recent Session section in dashboard only records the session of last 3 days
+            var today = DateTime.Today;
+            var cutoffDate = today.AddDays(-2);
+            return _sessions.Where(s => s.creation_date.Date >= cutoffDate || (DateTime.UtcNow - s.creation_date).TotalDays <= 3.0)
+                            .OrderByDescending(s => s.creation_date)
+                            .Take(count)
+                            .ToList()
+                            .AsReadOnly();
         }
 
         public IReadOnlyList<BasicSessionBundle> GetSessionsByDate(DateTime date)
@@ -91,20 +104,46 @@ namespace TableLamp.Services
                 {
                     string json = File.ReadAllText(_storagePath);
                     var list = DeserializeSessions(json);
-                    if (list != null && list.Count > 0)
+                    if (list != null)
                     {
+                        // Filter out any legacy premade sample sessions
+                        var filtered = list.Where(s => !IsPremadeSampleSession(s)).ToList();
                         _sessions.Clear();
-                        _sessions.AddRange(list);
+                        _sessions.AddRange(filtered);
+
+                        // If sample sessions were stripped, update persisted file immediately
+                        if (filtered.Count != list.Count)
+                        {
+                            Persist();
+                        }
                         return;
                     }
                 }
             }
             catch (Exception)
             {
-                // Fallback to seed data on error
+                // Fallback to empty session list on error
             }
 
-            SeedSampleData();
+            _sessions.Clear();
+        }
+
+        public static bool IsPremadeSampleSession(BasicSessionBundle? session)
+        {
+            if (session == null) return false;
+            if (!string.IsNullOrEmpty(session.Id) && session.Id.StartsWith("sample-", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string name = session.SessionName ?? session.DisplayTitle;
+            if (name == "Kinematics Warmup" ||
+                name == "Cell Bio Lecture Notes" ||
+                name == "Chemical Bonding Lecture" ||
+                name == "Calculus Mastery")
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private void Persist()

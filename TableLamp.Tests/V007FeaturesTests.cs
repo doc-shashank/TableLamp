@@ -11,66 +11,32 @@ namespace TableLamp.Tests
     public class V007FeaturesTests
     {
         [Fact]
-        public void AppUpdateService_ParseVersion_HandlesVariousFormats()
+        public void AppVersionService_ParseVersion_HandlesVariousFormats()
         {
-            var v1 = AppUpdateService.ParseVersion("0.0.7.0");
+            var v1 = AppVersionService.ParseVersion("0.0.7.0");
             Assert.Equal(new Version(0, 0, 7, 0), v1);
 
-            var v2 = AppUpdateService.ParseVersion("v0.0.8.0");
+            var v2 = AppVersionService.ParseVersion("v0.0.8.0");
             Assert.Equal(new Version(0, 0, 8, 0), v2);
 
-            var v3 = AppUpdateService.ParseVersion("v1.2");
+            var v3 = AppVersionService.ParseVersion("v1.2");
             Assert.Equal(new Version(1, 2, 0, 0), v3);
 
-            var v4 = AppUpdateService.ParseVersion("v2.1.0-beta.1");
+            var v4 = AppVersionService.ParseVersion("v2.1.0-beta.1");
             Assert.Equal(new Version(2, 1, 0, 0), v4);
 
-            var vEmpty = AppUpdateService.ParseVersion("");
+            var vEmpty = AppVersionService.ParseVersion("");
             Assert.Equal(new Version(0, 0, 0, 0), vEmpty);
         }
 
         [Fact]
-        public void AppUpdateService_CompareVersions_ComparesAccurately()
+        public void AppVersionService_CompareVersions_ComparesAccurately()
         {
-            Assert.True(AppUpdateService.CompareVersions("0.0.8.0", "0.0.7.0") > 0);
-            Assert.True(AppUpdateService.CompareVersions("v0.0.6.5", "0.0.7.0") < 0);
-            Assert.Equal(0, AppUpdateService.CompareVersions("v0.0.7.0", "0.0.7.0"));
-            Assert.True(AppUpdateService.CompareVersions("v1.0.0.0", "0.0.7.0") > 0);
-        }
-
-        [Fact]
-        public void AppUpdateService_ParseReleaseJson_DetectsUpdateAvailability()
-        {
-            string jsonWithNewRelease = @"
-            {
-                ""tag_name"": ""v0.0.9.0"",
-                ""name"": ""Table Lamp v0.0.9.0 Release"",
-                ""body"": ""- Added new study modes\n- Performance enhancements"",
-                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.9.0"",
-                ""published_at"": ""2026-09-09T12:00:00Z""
-            }";
-
-            var result = AppUpdateService.ParseReleaseJson(jsonWithNewRelease);
-            Assert.True(result.Success);
-            Assert.True(result.IsUpdateAvailable);
-            Assert.Equal("v0.0.9.0", result.LatestVersion);
-            Assert.Equal("Table Lamp v0.0.9.0 Release", result.ReleaseTitle);
-            Assert.Contains("Added new study modes", result.ReleaseNotes);
-            Assert.Equal("https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.9.0", result.ReleaseUrl);
-            Assert.NotNull(result.PublishedAt);
-
-            string jsonWithCurrentRelease = @"
-            {
-                ""tag_name"": ""v0.0.8.0"",
-                ""name"": ""Table Lamp v0.0.8.0 Release"",
-                ""body"": ""Current release notes"",
-                ""html_url"": ""https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.8.0"",
-                ""published_at"": ""2026-09-09T10:00:00Z""
-            }";
-
-            var resultCurrent = AppUpdateService.ParseReleaseJson(jsonWithCurrentRelease);
-            Assert.True(resultCurrent.Success);
-            Assert.False(resultCurrent.IsUpdateAvailable);
+            Assert.True(AppVersionService.CompareVersions("0.0.8.0", "0.0.7.0") > 0);
+            Assert.True(AppVersionService.CompareVersions("v0.0.6.5", "0.0.7.0") < 0);
+            Assert.Equal(0, AppVersionService.CompareVersions("v0.0.7.0", "0.0.7.0"));
+            Assert.True(AppVersionService.CompareVersions("v1.0.0.0", "0.0.7.0") > 0);
+            Assert.True(AppVersionService.CompareVersions("0.0.8.2", "0.0.8.1") > 0);
         }
 
         [Fact]

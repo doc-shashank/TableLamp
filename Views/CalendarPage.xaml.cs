@@ -30,7 +30,7 @@ namespace TableLamp.Views
             }
             else
             {
-                LoadSessionsForDate(SessionsCalendarView.SelectedDates.First().DateTime);
+                UpdateSelectedDateSessions(SessionsCalendarView.SelectedDates.First().DateTime);
             }
         }
 
@@ -38,13 +38,18 @@ namespace TableLamp.Views
         {
             if (args.AddedDates.Count > 0)
             {
-                LoadSessionsForDate(args.AddedDates[0].DateTime);
+                UpdateSelectedDateSessions(args.AddedDates[0].DateTime);
             }
         }
 
-        private async void LoadSessionsForDate(DateTime date)
+        private bool IsAdvancedWorkflow =>
+            string.Equals(MainScreen.Current?.InvocationMode, LauncherMode.Advanced, StringComparison.OrdinalIgnoreCase);
+
+        private async void UpdateSelectedDateSessions(DateTime date)
         {
-            SelectedDateHeaderText.Text = $"Sessions for {date:MMMM dd, yyyy}";
+            SelectedDateHeaderText.Text = date.Date == DateTime.Today
+                ? "Sessions for Today"
+                : $"Sessions for {date:MMM d, yyyy}";
 
             var allSessions = SessionService.Instance.GetSessionsByDate(date);
             var selfSessions = allSessions.Where(s => s.IsSelfSession).ToList();
@@ -56,8 +61,11 @@ namespace TableLamp.Views
             SelfSessionsCountText.Text = selfSessions.Count.ToString();
             ClassSessionsCountText.Text = classSessions.Count.ToString();
 
-            // Load pending reviews due on this date (or overdue if selected date is today)
-            var scheduledReviews = await SpacedRepetitionManager.Instance.GetReviewsForDateAsync(date);
+            // Load pending reviews due on this date (only in Advanced workflow)
+            var scheduledReviews = IsAdvancedWorkflow
+                ? await SpacedRepetitionManager.Instance.GetReviewsForDateAsync(date)
+                : (System.Collections.Generic.IReadOnlyList<SessionReviewAggregate>)Array.Empty<SessionReviewAggregate>();
+
             ScheduledReviewsItemsControl.ItemsSource = scheduledReviews;
             ScheduledReviewsCountText.Text = scheduledReviews.Count.ToString();
 
@@ -87,7 +95,9 @@ namespace TableLamp.Views
             }
             else
             {
-                SelectedDateSubtext.Text = "No study activity or scheduled reviews on this day";
+                SelectedDateSubtext.Text = IsAdvancedWorkflow
+                    ? "No study activity or scheduled reviews on this day"
+                    : "No study sessions recorded on this day";
             }
         }
 

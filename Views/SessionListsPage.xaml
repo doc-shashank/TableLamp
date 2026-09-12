@@ -16,6 +16,7 @@
                 <StackPanel Spacing="6">
                     <Grid Margin="0,0,0,8">
                         <Button x:Name="BackButton"
+                                AutomationProperties.AutomationId="SessionLists_BackButton"
                                 Style="{ThemeResource SubtleButtonStyle}"
                                 Padding="8,6"
                                 HorizontalAlignment="Left">
@@ -26,6 +27,7 @@
                         </Button>
 
                         <Button x:Name="CreateNewSessionButton"
+                                AutomationProperties.AutomationId="SessionLists_CreateNewSessionButton"
                                 HorizontalAlignment="Right"
                                 Style="{ThemeResource AccentButtonStyle}"
                                 Padding="14,6">
@@ -36,7 +38,7 @@
                         </Button>
                     </Grid>
 
-                    <TextBlock Text="Review Sessions" FontSize="26" FontWeight="Bold" />
+                    <TextBlock AutomationProperties.AutomationId="SessionLists_HeaderTitle" Text="Review Sessions" FontSize="26" FontWeight="Bold" />
                     <TextBlock Text="Browse, search, and review your study sessions."
                                FontSize="14"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -51,6 +53,7 @@
 
                     <!-- Search Box on Left -->
                     <TextBox x:Name="SearchBox"
+                             AutomationProperties.AutomationId="SessionLists_SearchBox"
                              Grid.Column="0"
                              PlaceholderText="Search sessions by subject, chapter, or topic..."
                              Margin="0,0,16,0" />
@@ -65,18 +68,21 @@
                                 Padding="3">
                             <StackPanel Orientation="Horizontal" Spacing="3">
                                 <Button x:Name="FilterAllButton"
+                                        AutomationProperties.AutomationId="SessionLists_FilterAllButton"
                                         Content="All"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Padding="12,5"
                                         CornerRadius="6"
                                         FontSize="12" />
                                 <Button x:Name="FilterSelfButton"
+                                        AutomationProperties.AutomationId="SessionLists_FilterSelfButton"
                                         Content="Self"
                                         Style="{ThemeResource SubtleButtonStyle}"
                                         Padding="12,5"
                                         CornerRadius="6"
                                         FontSize="12" />
                                 <Button x:Name="FilterClassButton"
+                                        AutomationProperties.AutomationId="SessionLists_FilterClassButton"
                                         Content="Class"
                                         Style="{ThemeResource SubtleButtonStyle}"
                                         Padding="12,5"
@@ -93,6 +99,7 @@
                                 Padding="3">
                             <StackPanel Orientation="Horizontal" Spacing="3">
                                 <Button x:Name="SortNewestButton"
+                                        AutomationProperties.AutomationId="SessionLists_SortNewestButton"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Padding="12,5"
                                         CornerRadius="6"
@@ -103,6 +110,7 @@
                                     </StackPanel>
                                 </Button>
                                 <Button x:Name="SortOldestButton"
+                                        AutomationProperties.AutomationId="SessionLists_SortOldestButton"
                                         Style="{ThemeResource SubtleButtonStyle}"
                                         Padding="12,5"
                                         CornerRadius="6"
@@ -119,6 +127,7 @@
 
                 <!-- Empty State -->
                 <Border x:Name="EmptyStateBorder"
+                        AutomationProperties.AutomationId="SessionLists_EmptyStateBorder"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
@@ -136,7 +145,8 @@
                 </Border>
 
                 <!-- Sessions ItemsControl -->
-                <ItemsControl x:Name="SessionsItemsControl">
+                <ItemsControl x:Name="SessionsItemsControl"
+                              AutomationProperties.AutomationId="SessionLists_SessionsItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,12"

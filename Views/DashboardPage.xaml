@@ -9,96 +9,119 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-        <!-- 2-Column Dashboard: Left: Recent Sessions, Right: Action Buttons in their place -->
-        <Grid ColumnDefinitions="440,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1340" HorizontalAlignment="Center">
-            <!-- 1. Left Column: Pending Reviews + Recent Sessions Section -->
-            <StackPanel Grid.Column="0" Spacing="24">
-                <!-- A. Pending Reviews Section (Spaced Repetition) -->
-                <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE823;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Pending Reviews" FontSize="18" FontWeight="SemiBold" />
-                            <Border x:Name="PendingReviewsCountBadge"
-                                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
-                                    CornerRadius="10"
-                                    Padding="8,2"
-                                    Visibility="Collapsed">
-                                <TextBlock x:Name="PendingReviewsCountText" Text="0" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Empty state if all caught up -->
-                    <Border x:Name="NoPendingReviewsBorder"
-                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="12"
-                            Padding="16,14"
-                            Visibility="Visible">
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE73E;" FontSize="16" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
-                            <TextBlock Text="All caught up! No reviews due right now." FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Pending Reviews ItemsControl -->
-                    <ItemsControl x:Name="PendingReviewsItemsControl" Visibility="Collapsed">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,0,0,10"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Padding="14,12"
-                                        Tapped="OnPendingReviewTapped"
-                                        PointerEntered="OnPendingReviewPointerEntered"
-                                        PointerExited="OnPendingReviewPointerExited"
-                                        Tag="{Binding}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <Border Grid.Column="0"
-                                                Width="36"
-                                                Height="36"
-                                                CornerRadius="8"
-                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                Margin="0,0,12,0"
-                                                VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding DueStatusDescription}" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" />
-                                        </StackPanel>
-
-                                        <FontIcon Grid.Column="2" Glyph="&#xE768;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" ToolTipService.ToolTip="Start Review" />
-                                    </Grid>
+        <Grid>
+            <!-- 2-Column Dashboard: Left: Recent Sessions, Right: Action Buttons in their place -->
+            <Grid x:Name="DashboardContentGrid" ColumnDefinitions="440,*" ColumnSpacing="36" Margin="36,32,36,48" MaxWidth="1340" HorizontalAlignment="Center">
+                <!-- 1. Left Column: Pending Reviews + Recent Sessions Section -->
+                <StackPanel Grid.Column="0" Spacing="24">
+                    <!-- A. Pending Reviews Section (Spaced Repetition) -->
+                    <StackPanel x:Name="PendingReviewsSection" Spacing="14">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE823;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Pending Reviews" FontSize="18" FontWeight="SemiBold" />
+                                <Border x:Name="PendingReviewsCountBadge"
+                                        AutomationProperties.AutomationId="Dashboard_PendingReviewsBadge"
+                                        Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                        CornerRadius="10"
+                                        Padding="8,2"
+                                        Visibility="Collapsed">
+                                    <TextBlock x:Name="PendingReviewsCountText" Text="0" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
                                 </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                            </StackPanel>
+                        </Grid>
 
-                <!-- B. Recent Sessions Section -->
-                <StackPanel Spacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE81C;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
-                        </StackPanel>
+                        <!-- Empty state if all caught up -->
+                        <Border x:Name="NoPendingReviewsBorder"
+                                AutomationProperties.AutomationId="Dashboard_NoPendingReviewsBorder"
+                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="16,14"
+                                Visibility="Visible">
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE73E;" FontSize="16" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+                                <TextBlock Text="All caught up! No reviews due right now." FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
 
-                        <Button x:Name="ViewAllSessionsButton"
-                                Grid.Column="1"
-                                Content="View All"
-                                Style="{ThemeResource SubtleButtonStyle}"
-                                Padding="10,4"
-                                FontSize="12" />
-                    </Grid>
+                        <!-- Pending Reviews ItemsControl -->
+                        <ItemsControl x:Name="PendingReviewsItemsControl" Visibility="Collapsed">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12"
+                                            Padding="14,12"
+                                            Tapped="OnPendingReviewTapped"
+                                            PointerEntered="OnPendingReviewPointerEntered"
+                                            PointerExited="OnPendingReviewPointerExited"
+                                            Tag="{Binding}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Border Grid.Column="0"
+                                                    Width="36"
+                                                    Height="36"
+                                                    CornerRadius="8"
+                                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                    Margin="0,0,12,0"
+                                                    VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
 
-                <!-- Recent Sessions ItemsControl -->
-                <ItemsControl x:Name="RecentSessionsItemsControl">
+                                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding DueStatusDescription}" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" />
+                                            </StackPanel>
+
+                                            <FontIcon Grid.Column="2" Glyph="&#xE768;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" ToolTipService.ToolTip="Start Review" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- B. Recent Sessions Section -->
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE81C;" FontSize="17" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Recent Sessions" FontSize="18" FontWeight="SemiBold" />
+                            </StackPanel>
+
+                            <Button x:Name="ViewAllSessionsButton"
+                                    AutomationProperties.AutomationId="Dashboard_ViewAllSessionsButton"
+                                    Grid.Column="1"
+                                    Content="View All"
+                                    Style="{ThemeResource SubtleButtonStyle}"
+                                    Padding="10,4"
+                                    FontSize="12" />
+                        </Grid>
+
+                        <!-- Empty state if no recently recorded sessions -->
+                        <Border x:Name="NoRecentSessionsBorder"
+                                AutomationProperties.AutomationId="Dashboard_NoRecentSessionsBorder"
+                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="16,14"
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE81C;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="NoRecentSessionsText"
+                                           AutomationProperties.AutomationId="Dashboard_NoRecentSessionsText"
+                                           Text="No recently recorded session"
+                                           FontSize="13"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Recent Sessions ItemsControl -->
+                        <ItemsControl x:Name="RecentSessionsItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,10"
@@ -154,6 +177,7 @@
 
                 <!-- CardButton 1: Create a New Session (Extends vertically downwards upon click) -->
                 <Border x:Name="CreateSessionCardButton"
+                        AutomationProperties.AutomationId="Dashboard_CreateSessionCard"
                         Grid.Column="0"
                         Height="250"
                         CornerRadius="16"
@@ -163,33 +187,60 @@
                         Padding="24"
                         IsHitTestVisible="True">
                     <Grid RowDefinitions="Auto,*,Auto,Auto">
-                        <Border Grid.Row="0"
-                                Width="54"
-                                Height="54"
-                                CornerRadius="14"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                HorizontalAlignment="Left">
-                            <FontIcon Glyph="&#xE710;" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        <!-- Header Trigger Button (Rows 0, 1, 2) -->
+                        <Button x:Name="CreateSessionHeaderButton"
+                                AutomationProperties.AutomationId="Dashboard_CreateSessionHeaderButton"
+                                AutomationProperties.Name="Create a New Session"
+                                Click="OnCreateSessionHeaderButtonClicked"
+                                Style="{ThemeResource SubtleButtonStyle}"
+                                Grid.Row="0"
+                                Grid.RowSpan="3"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0">
+                            <Grid RowDefinitions="Auto,*,Auto">
+                                <Border Grid.Row="0"
+                                        Width="54"
+                                        Height="54"
+                                        CornerRadius="14"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                        HorizontalAlignment="Left">
+                                    <FontIcon Glyph="&#xE710;" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
 
-                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
-                            <TextBlock Text="Create a New Session"
-                                       FontSize="21"
-                                       FontWeight="Bold" />
-                            <TextBlock Text="Configure subject, chapter, and author question cards with active recall tags"
-                                       FontSize="13"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
+                                <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
+                                    <TextBlock Text="Create a New Session"
+                                               FontSize="21"
+                                               FontWeight="Bold" />
+                                    <TextBlock Text="Configure subject, chapter, and author question cards with active recall tags"
+                                               FontSize="13"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
 
-                        <!-- Get Started Indicator (Collapsed when extended) -->
-                        <StackPanel x:Name="GetStartedIndicator" Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                            <TextBlock Text="Get Started" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                        </StackPanel>
+                                <!-- Get Started Indicator (Collapsed when extended) -->
+                                <StackPanel x:Name="GetStartedIndicator"
+                                            Grid.Row="2"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Right">
+                                    <TextBlock AutomationProperties.AutomationId="Dashboard_GetStartedIndicator"
+                                               Text="Get Started"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                        </Button>
 
                         <!-- Extension Options: Curated and Custom separated by a separator -->
                         <StackPanel x:Name="CreateSessionOptionsPanel"
+                                    AutomationProperties.AutomationId="Dashboard_CreateSessionOptionsPanel"
                                     Grid.Row="3"
                                     Visibility="Collapsed"
                                     Opacity="0"
@@ -200,6 +251,7 @@
                             <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
                                 <!-- Curated Option -->
                                 <Button x:Name="CuratedOptionButton"
+                                        AutomationProperties.AutomationId="Dashboard_CuratedOptionButton"
                                         Grid.Column="0"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         HorizontalAlignment="Stretch"
@@ -216,6 +268,7 @@
 
                                 <!-- Custom Option -->
                                 <Button x:Name="CustomOptionButton"
+                                        AutomationProperties.AutomationId="Dashboard_CustomOptionButton"
                                         Grid.Column="2"
                                         Style="{ThemeResource DefaultButtonStyle}"
                                         HorizontalAlignment="Stretch"
@@ -241,33 +294,84 @@
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         Padding="24"
                         IsHitTestVisible="True">
-                    <Grid RowDefinitions="Auto,*,Auto">
-                        <Border Grid.Row="0"
-                                Width="54"
-                                Height="54"
-                                CornerRadius="14"
-                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1"
-                                HorizontalAlignment="Left">
-                            <FontIcon Glyph="&#xE768;" FontSize="22" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Button x:Name="ReviewSessionHeaderButton"
+                            AutomationProperties.AutomationId="Dashboard_ReviewSessionCard"
+                            AutomationProperties.Name="Review Session"
+                            Click="OnReviewSessionHeaderButtonClicked"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <Border Grid.Row="0"
+                                    Width="54"
+                                    Height="54"
+                                    CornerRadius="14"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    HorizontalAlignment="Left">
+                                <FontIcon Glyph="&#xE768;" FontSize="22" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+
+                            <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
+                                <TextBlock Text="Review Session"
+                                           FontSize="21"
+                                           FontWeight="Bold" />
+                                <TextBlock Text="Practice and test active recall across your prepared questions and past sessions"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                <TextBlock Text="Browse Sessions" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Under Construction Container for Generator & Library Workflows -->
+        <Grid x:Name="UnderConstructionContainer"
+                  AutomationProperties.AutomationId="Dashboard_UnderConstructionContainer"
+                  Visibility="Collapsed"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Margin="36,80,36,48">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="48,40"
+                        MaxWidth="560"
+                        HorizontalAlignment="Center">
+                    <StackPanel Spacing="16" HorizontalAlignment="Center">
+                        <Border Width="64" Height="64" CornerRadius="32" Background="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE7BE;" FontSize="28" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-
-                        <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center" Margin="0,14,0,10">
-                            <TextBlock Text="Review Session"
-                                       FontSize="21"
-                                       FontWeight="Bold" />
-                            <TextBlock Text="Practice and test active recall across your prepared questions and past sessions"
-                                       FontSize="13"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                            <TextBlock Text="Browse Sessions" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <FontIcon Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Grid>
+                        <TextBlock x:Name="UnderConstructionTitle"
+                                   AutomationProperties.AutomationId="Dashboard_UnderConstructionTitle"
+                                   Text="Under Construction"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock x:Name="UnderConstructionMessage"
+                                   AutomationProperties.AutomationId="Dashboard_UnderConstructionMessage"
+                                   Text="This feature is currently under construction and will be available in an upcoming release."
+                                   FontSize="14"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   MaxWidth="420" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Grid>

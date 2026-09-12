@@ -91,9 +91,39 @@ namespace TableLamp.Services
         }
 
         /// <summary>
-        /// Fetches all sessions that have cards due or upcoming reviews, sorted by next due date.
+        /// Fetches all sessions that have cards pending review (due now or due on/before today).
         /// </summary>
         public async Task<IReadOnlyList<SessionReviewAggregate>> GetPendingReviewsAsync(DateTimeOffset? asOf = null)
+        {
+            DateTimeOffset now = asOf ?? DateTimeOffset.UtcNow;
+            DateTime targetDate = (asOf?.ToLocalTime().Date ?? DateTime.Today);
+            var allSessions = SessionService.Instance.GetAllSessions();
+            var aggregates = new List<SessionReviewAggregate>();
+
+            foreach (var s in allSessions)
+            {
+                if (s.questions == null || s.questions.Count == 0) continue;
+                var agg = await EvaluateSessionAsync(s, now);
+                bool isDue = agg.DueQuestionsCount > 0 ||
+                             (agg.NextSessionDue.HasValue && agg.NextSessionDue.Value.ToLocalTime().Date <= targetDate);
+
+                if (!agg.IsSessionCompleted && isDue)
+                {
+                    aggregates.Add(agg);
+                }
+            }
+
+            return aggregates
+                .OrderBy(a => a.DueQuestionsCount > 0 ? 0 : 1) // Due now first
+                .ThenBy(a => a.NextSessionDue ?? DateTimeOffset.MaxValue)
+                .ToList()
+                .AsReadOnly();
+        }
+
+        /// <summary>
+        /// Evaluates all sessions in the workspace and returns aggregates for all non-completed sessions.
+        /// </summary>
+        public async Task<IReadOnlyList<SessionReviewAggregate>> GetAllActiveSessionAggregatesAsync(DateTimeOffset? asOf = null)
         {
             DateTimeOffset now = asOf ?? DateTimeOffset.UtcNow;
             var allSessions = SessionService.Instance.GetAllSessions();
@@ -110,7 +140,7 @@ namespace TableLamp.Services
             }
 
             return aggregates
-                .OrderBy(a => a.DueQuestionsCount > 0 ? 0 : 1) // Due now first
+                .OrderBy(a => a.DueQuestionsCount > 0 ? 0 : 1)
                 .ThenBy(a => a.NextSessionDue ?? DateTimeOffset.MaxValue)
                 .ToList()
                 .AsReadOnly();
@@ -121,10 +151,10 @@ namespace TableLamp.Services
         /// </summary>
         public async Task<IReadOnlyList<SessionReviewAggregate>> GetReviewsForDateAsync(DateTime targetDate)
         {
-            var pending = await GetPendingReviewsAsync();
-            return pending.Where(p =>
+            var active = await GetAllActiveSessionAggregatesAsync();
+            return active.Where(p =>
                 (p.DueQuestionsCount > 0 && targetDate.Date >= DateTime.UtcNow.Date) ||
-                (p.NextSessionDue.HasValue && p.NextSessionDue.Value.Date == targetDate.Date)
+                (p.NextSessionDue.HasValue && p.NextSessionDue.Value.ToLocalTime().Date == targetDate.Date)
             ).ToList().AsReadOnly();
         }
     }

@@ -9,7 +9,7 @@ namespace TableLamp.Services
         public int NotificationDurationSeconds { get; set; } = 5;
         public string? LastWorkspacePath { get; set; }
         public string? LastOpenedJsonPath { get; set; }
-        public string CuratedContentVersion { get; set; } = $"v{AppUpdateService.CurrentVersionString}";
+        public string CuratedContentVersion { get; set; } = $"v{AppVersionService.CurrentVersionString}";
         public DateTime? CuratedContentLastUpdated { get; set; }
     }
 
@@ -67,7 +67,7 @@ namespace TableLamp.Services
 
         public string CuratedContentVersion
         {
-            get => string.IsNullOrWhiteSpace(_settings.CuratedContentVersion) ? "v0.0.7.5" : _settings.CuratedContentVersion;
+            get => string.IsNullOrWhiteSpace(_settings.CuratedContentVersion) ? $"v{AppVersionService.CurrentVersionString}" : _settings.CuratedContentVersion;
             set
             {
                 if (_settings.CuratedContentVersion != value)

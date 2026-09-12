@@ -10,6 +10,7 @@ namespace TableLamp.Models
         public const string Basic = "Basic";
         public const string Advanced = "Advanced";
         public const string Generator = "Generator";
+        public const string Library = "Library";
 
         /// <summary>
         /// Validates and normalizes launcher mode arguments.
@@ -22,6 +23,7 @@ namespace TableLamp.Models
             if (clean.Equals(Basic, StringComparison.OrdinalIgnoreCase)) return Basic;
             if (clean.Equals(Advanced, StringComparison.OrdinalIgnoreCase)) return Advanced;
             if (clean.Equals(Generator, StringComparison.OrdinalIgnoreCase)) return Generator;
+            if (clean.Equals(Library, StringComparison.OrdinalIgnoreCase)) return Library;
 
             return Basic;
         }

@@ -17,26 +17,17 @@ namespace TableLamp.Tests
         [Fact]
         public void VersionConstants_AreUpdatedToCurrentVersion()
         {
-            Assert.True(AppUpdateService.CompareVersions(AppUpdateService.CurrentVersionString, "0.0.7.3") >= 0);
+            Assert.True(AppVersionService.CompareVersions(AppVersionService.CurrentVersionString, "0.0.7.3") >= 0);
             Assert.True(new AppSettings().CuratedContentVersion.StartsWith("v0.0."));
             AppSettingsService.Instance.CuratedContentVersion = "v0.0.7.5";
             Assert.Equal("v0.0.7.5", AppSettingsService.Instance.CuratedContentVersion);
         }
 
         [Fact]
-        public void AuthenticodeLogic_IsCompletelyRemovedFromAppUpdateService()
+        public void AppUpdateService_IsCompletelyRemovedFromApplication()
         {
-            var appUpdateServiceType = typeof(AppUpdateService);
-
-            // Verify VerifyBinarySignature does not exist
-            var verifyMethod = appUpdateServiceType.GetMethod("VerifyBinarySignature", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-            Assert.Null(verifyMethod);
-
-            // Verify TrustedPublisherSubject does not exist
-            var trustedPublisherField = appUpdateServiceType.GetField("TrustedPublisherSubject", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-            var trustedPublisherProp = appUpdateServiceType.GetProperty("TrustedPublisherSubject", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-            Assert.Null(trustedPublisherField);
-            Assert.Null(trustedPublisherProp);
+            var appUpdateServiceType = typeof(AppVersionService).Assembly.GetType("TableLamp.Services.AppUpdateService");
+            Assert.Null(appUpdateServiceType);
         }
 
         [Fact]
@@ -103,18 +94,18 @@ namespace TableLamp.Tests
 
             Assert.True(File.Exists(issPath));
             string issContent = File.ReadAllText(issPath);
-            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\""));
+            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\"") || issContent.Contains("MyAppVersion \"0.0.8.1\"") || issContent.Contains("MyAppVersion \"0.0.8.2\""));
             Assert.DoesNotContain("SignTool=", issContent);
 
             Assert.True(File.Exists(csprojPath));
             string csprojContent = File.ReadAllText(csprojPath);
-            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>"));
-            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>"));
-            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>"));
+            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>") || csprojContent.Contains("<Version>0.0.8.1</Version>") || csprojContent.Contains("<Version>0.0.8.2</Version>"));
+            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.1</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.2</AssemblyVersion>"));
+            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.1</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.2</FileVersion>"));
 
             Assert.True(File.Exists(buildPs1Path));
             string ps1Content = File.ReadAllText(buildPs1Path);
-            Assert.True(ps1Content.Contains("0.0.7.5") || ps1Content.Contains("0.0.8.0"));
+            Assert.True(ps1Content.Contains("0.0.7.5") || ps1Content.Contains("0.0.8.0") || ps1Content.Contains("0.0.8.1") || ps1Content.Contains("0.0.8.2"));
         }
 
         [Fact]

@@ -26,45 +26,10 @@ namespace TableLamp.Views
             FormatCuratedDatabaseButton.Click += OnFormatCuratedDatabaseClicked;
             FormatCustomDatabaseButton.Click += OnFormatCustomDatabaseClicked;
             FormatAllDatabasesButton.Click += OnFormatAllDatabasesClicked;
-            CheckForUpdatesButton.Click += OnCheckForUpdatesClicked;
             UpdateCuratedPresetsButton.Click += OnUpdateCuratedPresetsClicked;
 
             LoadNotificationDurationSetting();
             NotificationDurationComboBox.SelectionChanged += OnNotificationDurationChanged;
-        }
-
-        private async void OnCheckForUpdatesClicked(object sender, RoutedEventArgs e)
-        {
-            CheckForUpdatesButton.IsEnabled = false;
-            NotificationCard.Show("Checking for Table Lamp updates...", InfoBarSeverity.Informational);
-
-            try
-            {
-                var result = await AppUpdateService.CheckForUpdatesAsync();
-                if (result.Success)
-                {
-                    if (result.IsUpdateAvailable)
-                    {
-                        NotificationCard.Show($"New version available: {result.LatestVersion}! {result.ReleaseTitle}", InfoBarSeverity.Informational);
-                    }
-                    else
-                    {
-                        NotificationCard.Show($"You are running the latest version of Table Lamp (v{AppUpdateService.CurrentVersionString}).", InfoBarSeverity.Success);
-                    }
-                }
-                else
-                {
-                    NotificationCard.Show(result.ErrorMessage ?? "Could not check for updates.", InfoBarSeverity.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                NotificationCard.Show($"Update check failed: {ex.Message}", InfoBarSeverity.Error);
-            }
-            finally
-            {
-                CheckForUpdatesButton.IsEnabled = true;
-            }
         }
 
         private async void OnUpdateCuratedPresetsClicked(object sender, RoutedEventArgs e)

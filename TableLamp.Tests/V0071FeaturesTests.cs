@@ -18,10 +18,10 @@ namespace TableLamp.Tests
         }
 
         [Fact]
-        public void AppUpdateService_CurrentVersion_IsAtLeastV0071()
+        public void AppVersionService_CurrentVersion_IsAtLeastV0071()
         {
-            Assert.True(AppUpdateService.CompareVersions(AppUpdateService.CurrentVersionString, "0.0.7.1") >= 0);
-            Assert.True(AppUpdateService.CurrentVersion >= new Version(0, 0, 7, 1));
+            Assert.True(AppVersionService.CompareVersions(AppVersionService.CurrentVersionString, "0.0.7.1") >= 0);
+            Assert.True(AppVersionService.CurrentVersion >= new Version(0, 0, 7, 1));
         }
 
         [Fact]

@@ -14,6 +14,8 @@ namespace TableLamp.Views
     public sealed partial class DashboardPage : Page
     {
         private BasicUI? _basicUIController;
+        private GeneratorUI? _generatorUIController;
+        private LibraryUI? _libraryUIController;
         private bool _isCreateSessionExpanded;
 
         public DashboardPage()
@@ -23,21 +25,53 @@ namespace TableLamp.Views
             _basicUIController = new BasicUI(this);
 
             WireCardButtons();
-            ViewAllSessionsButton.Click += (s, e) => Frame.Navigate(typeof(SessionListsPage), "Newest");
+            ViewAllSessionsButton.Click += (s, e) => Frame.Navigate(typeof(RecentSessionPage));
         }
+
+        private bool IsAdvancedWorkflow =>
+            string.Equals(MainScreen.Current?.InvocationMode, LauncherMode.Advanced, StringComparison.OrdinalIgnoreCase);
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            _basicUIController?.LoadRecentSessions();
-            _ = LoadPendingReviewsAsync();
-            SpacedRepetitionManager.Instance.ReviewStatesChanged += OnReviewStatesChanged;
+
+            string mode = MainScreen.Current?.InvocationMode ?? LauncherMode.Basic;
+            if (string.Equals(mode, LauncherMode.Generator, StringComparison.OrdinalIgnoreCase))
+            {
+                _generatorUIController = new GeneratorUI(this);
+                _generatorUIController.ApplyGeneratorMode();
+            }
+            else if (string.Equals(mode, LauncherMode.Library, StringComparison.OrdinalIgnoreCase))
+            {
+                _libraryUIController = new LibraryUI(this);
+                _libraryUIController.ApplyLibraryMode();
+            }
+            else
+            {
+                DashboardContentGrid.Visibility = Visibility.Visible;
+                UnderConstructionContainer.Visibility = Visibility.Collapsed;
+                _basicUIController?.LoadRecentSessions();
+
+                if (IsAdvancedWorkflow)
+                {
+                    PendingReviewsSection.Visibility = Visibility.Visible;
+                    _ = LoadPendingReviewsAsync();
+                    SpacedRepetitionManager.Instance.ReviewStatesChanged += OnReviewStatesChanged;
+                }
+                else
+                {
+                    PendingReviewsSection.Visibility = Visibility.Collapsed;
+                }
+            }
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-            SpacedRepetitionManager.Instance.ReviewStatesChanged -= OnReviewStatesChanged;
+            if (IsAdvancedWorkflow)
+            {
+                SpacedRepetitionManager.Instance.ReviewStatesChanged -= OnReviewStatesChanged;
+            }
         }
 
         private void OnReviewStatesChanged()
@@ -87,6 +121,17 @@ namespace TableLamp.Views
 
             _isCreateSessionExpanded = !_isCreateSessionExpanded;
             AnimateCreateSessionCard(_isCreateSessionExpanded);
+        }
+
+        private void OnCreateSessionHeaderButtonClicked(object sender, RoutedEventArgs e)
+        {
+            _isCreateSessionExpanded = !_isCreateSessionExpanded;
+            AnimateCreateSessionCard(_isCreateSessionExpanded);
+        }
+
+        private void OnReviewSessionHeaderButtonClicked(object sender, RoutedEventArgs e)
+        {
+            Frame.Navigate(typeof(SessionListsPage));
         }
 
         private void AnimateCreateSessionCard(bool expand)
@@ -164,7 +209,26 @@ namespace TableLamp.Views
 
         public void PopulateRecentSessions(System.Collections.Generic.IEnumerable<BasicSessionBundle> sessions)
         {
-            RecentSessionsItemsControl.ItemsSource = sessions;
+            var list = sessions != null ? new System.Collections.Generic.List<BasicSessionBundle>(sessions) : new System.Collections.Generic.List<BasicSessionBundle>();
+            if (list.Count == 0)
+            {
+                NoRecentSessionsBorder.Visibility = Visibility.Visible;
+                RecentSessionsItemsControl.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                NoRecentSessionsBorder.Visibility = Visibility.Collapsed;
+                RecentSessionsItemsControl.Visibility = Visibility.Visible;
+                RecentSessionsItemsControl.ItemsSource = list;
+            }
+        }
+
+        public void ShowUnderConstruction(string title, string message)
+        {
+            DashboardContentGrid.Visibility = Visibility.Collapsed;
+            UnderConstructionContainer.Visibility = Visibility.Visible;
+            UnderConstructionTitle.Text = string.IsNullOrWhiteSpace(title) ? "Under Construction" : $"{title} - Under Construction";
+            UnderConstructionMessage.Text = string.IsNullOrWhiteSpace(message) ? "This feature is currently under construction and will be available in an upcoming release." : message;
         }
 
         private void OnRecentSessionTapped(object sender, TappedRoutedEventArgs e)

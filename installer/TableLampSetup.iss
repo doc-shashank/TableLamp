@@ -4,7 +4,7 @@
 
 #define MyAppName "Table Lamp"
 #ifndef MyAppVersion
-#define MyAppVersion "0.0.8.0"
+#define MyAppVersion "0.0.8.2"
 #endif
 #define MyAppPublisher "doc-shashank"
 #define MyAppURL "https://github.com/doc-shashank/table-lamp"

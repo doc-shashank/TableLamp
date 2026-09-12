@@ -16,6 +16,8 @@ namespace TableLamp.Views
     {
         private BasicSessionBundle? _session;
         private int _currentIndex;
+        private bool IsAdvancedWorkflow =>
+            string.Equals(MainScreen.Current?.InvocationMode, LauncherMode.Advanced, StringComparison.OrdinalIgnoreCase);
 
         public ViewCanvasPage()
         {
@@ -193,11 +195,20 @@ namespace TableLamp.Views
                 UpdateViewMode("Text", question);
             }
 
-            CardSpacedRepetitionBorder.Visibility = Visibility.Visible;
-            RateHardButton.IsEnabled = true;
-            RateMediumButton.IsEnabled = true;
-            RateEasyButton.IsEnabled = true;
-            _ = UpdateCardSpacedRepetitionStatsAsync();
+            if (IsAdvancedWorkflow)
+            {
+                CardSpacedRepetitionBorder.Visibility = Visibility.Visible;
+                RatingBarBorder.Visibility = Visibility.Visible;
+                RateHardButton.IsEnabled = true;
+                RateMediumButton.IsEnabled = true;
+                RateEasyButton.IsEnabled = true;
+                _ = UpdateCardSpacedRepetitionStatsAsync();
+            }
+            else
+            {
+                CardSpacedRepetitionBorder.Visibility = Visibility.Collapsed;
+                RatingBarBorder.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void UpdateViewMode(string mode, SimpleQuestion question)

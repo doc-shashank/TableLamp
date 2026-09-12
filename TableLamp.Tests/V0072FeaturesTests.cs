@@ -16,7 +16,7 @@ namespace TableLamp.Tests
         [Fact]
         public void VersionConstants_AreUpdatedToCurrentVersion()
         {
-            Assert.True(AppUpdateService.CompareVersions(AppUpdateService.CurrentVersionString, "0.0.7.2") >= 0);
+            Assert.True(AppVersionService.CompareVersions(AppVersionService.CurrentVersionString, "0.0.7.2") >= 0);
             Assert.True(new AppSettings().CuratedContentVersion.StartsWith("v0.0."));
             AppSettingsService.Instance.CuratedContentVersion = "v0.0.7.5";
             Assert.Equal("v0.0.7.5", AppSettingsService.Instance.CuratedContentVersion);
@@ -32,7 +32,7 @@ namespace TableLamp.Tests
         [InlineData(null, null)]
         public void ExtractTagFromReleaseUrl_ExtractsCorrectly(string? url, string? expectedTag)
         {
-            string? result = AppUpdateService.ExtractTagFromReleaseUrl(url);
+            string? result = CuratedContentUpdateService.ExtractTagFromReleaseUrl(url);
             Assert.Equal(expectedTag, result);
         }
 
@@ -49,33 +49,30 @@ namespace TableLamp.Tests
         [InlineData(null, false)]
         public void IsValidTag_PreventsPathTraversalAndInjection(string? tag, bool expectedValid)
         {
-            bool valid = AppUpdateService.IsValidTag(tag);
+            bool valid = CuratedContentUpdateService.IsValidTag(tag);
             Assert.Equal(expectedValid, valid);
         }
 
         [Fact]
         public void IsTrustedGitHubUrl_EnforcesHttpsAndTrustedHosts()
         {
-            Assert.True(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://github.com/doc-shashank/table-lamp")));
-            Assert.True(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://codeload.github.com/doc-shashank/table-lamp/zip/refs/tags/v0.0.1")));
-            Assert.True(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://objects.githubusercontent.com/github-production-release-asset")));
-            Assert.True(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://github-production-release-asset-2e65be.s3.amazonaws.com/test.zip")));
+            Assert.True(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://github.com/doc-shashank/table-lamp")));
+            Assert.True(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://codeload.github.com/doc-shashank/table-lamp/zip/refs/tags/v0.0.1")));
+            Assert.True(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://objects.githubusercontent.com/github-production-release-asset")));
+            Assert.True(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://github-production-release-asset-2e65be.s3.amazonaws.com/test.zip")));
 
             // Insecure HTTP rejected
-            Assert.False(AppUpdateService.IsTrustedGitHubUrl(new Uri("http://github.com/insecure")));
+            Assert.False(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("http://github.com/insecure")));
             // Untrusted domain rejected
-            Assert.False(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://evil-phishing.com/download.zip")));
-            Assert.False(AppUpdateService.IsTrustedGitHubUrl(new Uri("https://malicious-github.com")));
+            Assert.False(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://evil-phishing.com/download.zip")));
+            Assert.False(CuratedContentUpdateService.IsTrustedGitHubUrl(new Uri("https://malicious-github.com")));
         }
 
         [Fact]
         public void DownloadUrlBlueprints_AreConstructedWithoutApi()
         {
-            string assetUrl = AppUpdateService.BuildAssetDownloadUrl("doc-shashank", "table-lamp", "v0.0.7.2", "TableLamp-Setup-v0.0.7.2.exe");
+            string assetUrl = CuratedContentUpdateService.BuildAssetDownloadUrl("doc-shashank", "table-lamp", "v0.0.7.2", "TableLamp-Setup-v0.0.7.2.exe");
             Assert.Equal("https://github.com/doc-shashank/table-lamp/releases/download/v0.0.7.2/TableLamp-Setup-v0.0.7.2.exe", assetUrl);
-
-            string releaseUrl = AppUpdateService.BuildReleaseUrl("doc-shashank", "table-lamp", "v0.0.7.2");
-            Assert.Equal("https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.7.2", releaseUrl);
 
             string archiveUrl = CuratedContentUpdateService.BuildArchiveDownloadUrl("doc-shashank", "table-lamp-curated-tags", "v0.0.1");
             Assert.Equal("https://github.com/doc-shashank/table-lamp-curated-tags/archive/refs/tags/v0.0.1.zip", archiveUrl);
@@ -165,24 +162,6 @@ namespace TableLamp.Tests
             }
         }
 
-        [Fact]
-        public async Task AppUpdateService_ZeroApiRedirectCheck_DetectsUpdate()
-        {
-            // Simulate 302 Found redirect to a newer release tag
-            var handler = new MockRedirectHttpMessageHandler(
-                HttpStatusCode.Found,
-                new Uri("https://github.com/doc-shashank/table-lamp/releases/tag/v0.0.9.0"));
-
-            using var httpClient = new HttpClient(handler);
-            var result = await AppUpdateService.CheckForUpdatesAsync(httpClient);
-
-            Assert.True(result.Success);
-            Assert.True(result.IsUpdateAvailable);
-            Assert.Equal("v0.0.9.0", result.LatestVersion);
-            Assert.Equal(AppUpdateService.CurrentVersionString, result.CurrentVersion);
-            Assert.Contains("releases/tag/v0.0.9.0", result.ReleaseUrl);
-            Assert.Contains("releases/download/v0.0.9.0", result.DownloadUrl);
-        }
 
         [Fact]
         public async Task CuratedContentUpdateService_ZeroApiRedirectCheck_ReturnsDirectUrls()
@@ -210,14 +189,14 @@ namespace TableLamp.Tests
 
             Assert.True(File.Exists(issPath));
             string issContent = File.ReadAllText(issPath);
-            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\""));
+            Assert.True(issContent.Contains("MyAppVersion \"0.0.7.5\"") || issContent.Contains("MyAppVersion \"0.0.8.0\"") || issContent.Contains("MyAppVersion \"0.0.8.1\"") || issContent.Contains("MyAppVersion \"0.0.8.2\""));
             Assert.DoesNotContain("SignTool=", issContent);
 
             Assert.True(File.Exists(csprojPath));
             string csprojContent = File.ReadAllText(csprojPath);
-            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>"));
-            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>"));
-            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>"));
+            Assert.True(csprojContent.Contains("<Version>0.0.7.5</Version>") || csprojContent.Contains("<Version>0.0.8.0</Version>") || csprojContent.Contains("<Version>0.0.8.1</Version>") || csprojContent.Contains("<Version>0.0.8.2</Version>"));
+            Assert.True(csprojContent.Contains("<AssemblyVersion>0.0.7.5</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.0</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.1</AssemblyVersion>") || csprojContent.Contains("<AssemblyVersion>0.0.8.2</AssemblyVersion>"));
+            Assert.True(csprojContent.Contains("<FileVersion>0.0.7.5</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.0</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.1</FileVersion>") || csprojContent.Contains("<FileVersion>0.0.8.2</FileVersion>"));
         }
 
         [Fact]

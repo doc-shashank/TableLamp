@@ -23,6 +23,7 @@
         <Grid VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,8,10,0" Canvas.ZIndex="100">
             <StackPanel Orientation="Horizontal" Spacing="2">
                 <Button x:Name="LauncherSettingsButton"
+                        AutomationProperties.AutomationId="Launcher_SettingsButton"
                         ToolTipService.ToolTip="Launcher Settings"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Width="44"
@@ -31,6 +32,7 @@
                     <FontIcon Glyph="&#xE713;" FontSize="14" />
                 </Button>
                 <Button x:Name="WindowMinimizeButton"
+                        AutomationProperties.AutomationId="Launcher_MinimizeButton"
                         ToolTipService.ToolTip="Minimize"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Width="44"
@@ -39,6 +41,7 @@
                     <FontIcon Glyph="&#xE921;" FontSize="10" />
                 </Button>
                 <Button x:Name="WindowExitButton"
+                        AutomationProperties.AutomationId="Launcher_ExitButton"
                         ToolTipService.ToolTip="Close"
                         Style="{ThemeResource SubtleButtonStyle}"
                         Width="44"
@@ -72,9 +75,10 @@
                   ColumnSpacing="18"
                   Margin="0,18,0,14">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200" />
-                    <ColumnDefinition Width="200" />
-                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="165" />
+                    <ColumnDefinition Width="165" />
+                    <ColumnDefinition Width="165" />
+                    <ColumnDefinition Width="165" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Card Container 1: Basic (Interactive Button) -->
@@ -85,26 +89,40 @@
                         BorderThickness="1.5"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Padding="14"
+                        Padding="0"
                         IsHitTestVisible="True">
-                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <Border Grid.Row="0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Width="48"
-                                Height="48"
-                                CornerRadius="24"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}">
-                            <FontIcon Glyph="&#xE735;" FontSize="20" Foreground="White" />
-                        </Border>
-                        <TextBlock x:Name="BasicText"
-                                   Grid.Row="1"
-                                   Text="Basic"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,4,0,2" />
-                    </Grid>
+                    <Button x:Name="BasicCardButton"
+                            AutomationProperties.AutomationId="Launcher_BasicCard"
+                            AutomationProperties.Name="Launch Basic Mode"
+                            Click="OnBasicCardButtonClicked"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Padding="14"
+                            CornerRadius="14"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Border Grid.Row="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <FontIcon Glyph="&#xE735;" FontSize="20" Foreground="White" />
+                            </Border>
+                            <TextBlock x:Name="BasicText"
+                                       Grid.Row="1"
+                                       Text="Basic"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,2" />
+                        </Grid>
+                    </Button>
                 </Border>
 
                 <!-- Card Container 2: Advanced (Not Interactable for now) -->
@@ -129,6 +147,7 @@
                             <FontIcon Glyph="&#xE734;" FontSize="20" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         </Border>
                         <TextBlock x:Name="AdvancedText"
+                                   AutomationProperties.AutomationId="Launcher_AdvancedCard"
                                    Grid.Row="1"
                                    Text="Advanced"
                                    FontSize="16"
@@ -139,63 +158,102 @@
                     </Grid>
                 </Border>
 
-                <!-- Card Container 3: Generator (Not Interactable for now) -->
+                <!-- Card Container 3: Generator (Interactive Button) -->
                 <Border x:Name="GeneratorCard"
                         Grid.Column="2"
                         Height="160"
                         CornerRadius="14"
-                        BorderThickness="1"
-                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderThickness="1.5"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        Opacity="0.5"
-                        Padding="14"
+                        Padding="0"
                         IsHitTestVisible="True">
-                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <Border Grid.Row="0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Width="48"
-                                Height="48"
-                                CornerRadius="24"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <FontIcon Glyph="&#xE945;" FontSize="20" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                        </Border>
-                        <TextBlock x:Name="GeneratorText"
-                                   Grid.Row="1"
-                                   Text="Generator"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   Margin="0,4,0,2" />
-                    </Grid>
+                    <Button x:Name="GeneratorCardButton"
+                            AutomationProperties.AutomationId="Launcher_GeneratorCard"
+                            AutomationProperties.Name="Launch Generator Mode"
+                            Click="OnGeneratorCardButtonClicked"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Padding="14"
+                            CornerRadius="14"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Border Grid.Row="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <FontIcon Glyph="&#xE945;" FontSize="20" Foreground="White" />
+                            </Border>
+                            <TextBlock x:Name="GeneratorText"
+                                       Grid.Row="1"
+                                       Text="Generator"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,2" />
+                        </Grid>
+                    </Button>
+                </Border>
+
+                <!-- Card Container 4: Library (Interactive Button) -->
+                <Border x:Name="LibraryCard"
+                        Grid.Column="3"
+                        Height="160"
+                        CornerRadius="14"
+                        BorderThickness="1.5"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        Padding="0"
+                        IsHitTestVisible="True">
+                    <Button x:Name="LibraryCardButton"
+                            AutomationProperties.AutomationId="Launcher_LibraryCard"
+                            AutomationProperties.Name="Launch Library Mode"
+                            Click="OnLibraryCardButtonClicked"
+                            Style="{ThemeResource SubtleButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Padding="14"
+                            CornerRadius="14"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Border Grid.Row="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <FontIcon Glyph="&#xE8F1;" FontSize="20" Foreground="White" />
+                            </Border>
+                            <TextBlock x:Name="LibraryText"
+                                       Grid.Row="1"
+                                       Text="Library"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,2" />
+                        </Grid>
+                    </Button>
                 </Border>
             </Grid>
 
-            <!-- Update Notification Labels (App Update & Curated Tags) below cards, above version label -->
+            <!-- Update Notification Labels (Curated Tags) below cards, above version label -->
             <StackPanel Grid.Row="2"
                         x:Name="UpdateLabelsPanel"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="4"
                         Margin="0,0,0,10">
-                <!-- App Version Update Notification Label -->
-                <Button x:Name="AppUpdateNotificationBtn"
-                        Visibility="Collapsed"
-                        Style="{ThemeResource SubtleButtonStyle}"
-                        Padding="10,4"
-                        HorizontalAlignment="Center"
-                        Background="Transparent">
-                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE896;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                        <TextBlock x:Name="AppUpdateNotificationText"
-                                   Text="App Update Available"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                    </StackPanel>
-                </Button>
-
                 <!-- Curated Tags Update Notification Label -->
                 <Button x:Name="CuratedUpdateNotificationBtn"
                         Visibility="Collapsed"
@@ -224,10 +282,15 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Table Lamp" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     <TextBlock Text="•" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                    <TextBlock x:Name="LauncherVersionTextBlock" Text="Version 0.0.8.0" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock x:Name="LauncherVersionTextBlock"
+                               AutomationProperties.AutomationId="Launcher_VersionText"
+                               Text="Version 0.0.8.2"
+                               FontSize="11"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
 
                 <Button x:Name="DevToolsButton"
+                        AutomationProperties.AutomationId="Launcher_DevToolsButton"
                         Grid.Column="1"
                         Style="{ThemeResource AccentButtonStyle}"
                         Padding="12,6"

@@ -75,11 +75,14 @@ namespace TableLamp.Models
                 if (DueQuestionsCount > 0) return $"{DueQuestionsCount} card{(DueQuestionsCount == 1 ? "" : "s")} due now";
                 if (!NextSessionDue.HasValue) return "No scheduled review";
 
-                var diff = NextSessionDue.Value - DateTimeOffset.UtcNow;
-                if (diff.TotalDays < 0) return "Overdue";
-                if (diff.TotalDays < 1.0) return "Due today";
-                if (diff.TotalDays < 2.0) return "Due tomorrow";
-                return $"Due in {Math.Ceiling(diff.TotalDays):F0} days";
+                var localDue = NextSessionDue.Value.ToLocalTime().Date;
+                var localToday = DateTime.Today;
+
+                if (localDue < localToday) return "Overdue";
+                if (localDue == localToday) return "Due today";
+                if (localDue == localToday.AddDays(1)) return "Due tomorrow";
+                int days = (localDue - localToday).Days;
+                return $"Due in {days} days";
             }
         }
     }
